@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+:root { --font-inter: "Inter", system-ui, sans-serif; --font-playfair: "Playfair Display", Georgia, serif; }
+
+html, body { overflow-x: hidden; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-inter); background: #020617; }
+.font-serif { font-family: var(--font-playfair); }
+
+::selection { background: rgba(59,130,246,.35); color: #fff; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #020617; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 8px; }
+
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.animate-marquee { animation: marquee 40s linear infinite; }
+@keyframes float-slow { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
+.animate-float-slow { animation: float-slow 7s ease-in-out infinite; }
+@keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+.animate-scan { animation: scan 3.5s ease-in-out infinite; }

@@ -1,0 +1,19 @@
+import type { Metadata } from "next";
+import { Inter, Playfair_Display } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["400", "500", "600", "700", "800"], style: ["normal", "italic"] });
+
+export const metadata: Metadata = {
+  title: "BotShield — Enterprise Bot Detection & Protection",
+  description: "Lightweight, AI-powered bot detection API. Protect your website from bots, spam, and fraud without annoying CAPTCHAs.",
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body className="bg-slate-950 text-slate-100 antialiased">{children}</body>
+    </html>
+  );
+}
