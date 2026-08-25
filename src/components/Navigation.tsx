@@ -14,7 +14,7 @@ function Hamburger({ open }: { open: boolean }) {
   );
 }
 
-export function Navigation() {
+export function Navigation({ menu }: { menu?: { label: string; href: string }[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -102,7 +102,7 @@ export function Navigation() {
         <motion.div initial={{ clipPath: "inset(0 0 100% 0)" }} animate={{ clipPath: "inset(0 0 0% 0)" }} exit={{ clipPath: "inset(0 0 100% 0)" }} transition={{ duration: 0.6 }} className="fixed inset-0 z-[70] bg-slate-950 lg:hidden overflow-y-auto">
           <div className="px-6 pt-28 pb-16">
             <nav className="space-y-2">
-              {links.map((l, i) => (
+              {(menu || links).map((l, i) => (
                 <motion.div key={l.href} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }}>
                   <Link href={l.href} onClick={() => setMenuOpen(false)} className="group flex items-center justify-between py-4 border-b border-slate-800/60">
                     <span className="font-serif text-4xl text-white group-hover:italic group-hover:text-blue-400 transition-colors">{l.label}</span>

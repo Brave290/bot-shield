@@ -12,11 +12,13 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 const gen = (p: string) => p + Array.from(crypto.getRandomValues(new Uint8Array(24))).map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
 
 const PLANS: Record<string, any> = {
-  Hobby: { price: "$0", maxProjects: 2, requests: "1K / mo", analytics: "7 days", locked: ["Adaptive AI scoring", "100K requests / month", "90-day analytics", "Priority support"] },
-  Pro: { price: "$29", maxProjects: 10, requests: "100K / mo", analytics: "90 days", locked: [] },
+  Hobby: { price: "$0", maxProjects: 2, requests: "1K / mo", analytics: "7 days", feats: ["1,000 requests / month", "Core behavioral detection", "Community support", "Full source access"], locked: ["Adaptive AI scoring", "100K requests / month", "90-day analytics", "Priority support"] },
+  Pro: { price: "$29", maxProjects: 10, requests: "100K / mo", analytics: "90 days", feats: ["100,000 requests / month", "Adaptive AI scoring", "Live analytics dashboard", "Priority email support", "99.9% uptime SLA"], locked: [] },
+  Enterprise: { price: "Custom", maxProjects: 999, requests: "Unlimited", analytics: "Unlimited", feats: ["Unlimited requests", "Dedicated infrastructure", "On-premise deployment", "24/7 support with SLA"], locked: [] },
 };
 
 type Tab = "overview" | "projects" | "analytics" | "plan" | "settings";
+const TABS: Tab[] = ["overview", "projects", "analytics", "plan", "settings"];
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -32,12 +34,21 @@ export default function Dashboard() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const plan = PLANS[tier] || PLANS.Hobby;
 
+  const go = (t: Tab) => { setTab(t); window.history.replaceState(null, "", "#" + t); };
+
   const load = async (uid: string) => {
     const { data } = await supabase.from("projects").select("*").eq("user_id", uid).order("created_at", { ascending: false });
     setProjects(data || []);
     const { data: sub } = await supabase.from("subscription_stats").select("tier_name").eq("user_id", uid).single();
     setTier(sub?.tier_name || "Hobby");
   };
+
+  useEffect(() => {
+    const applyHash = () => { const h = window.location.hash.replace("#", "") as Tab; if (TABS.includes(h)) setTab(h); };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -84,6 +95,7 @@ export default function Dashboard() {
   const copy = async (text: string, id: string) => { await navigator.clipboard.writeText(text); setCopied(id); toast("success", "Copied to clipboard"); setTimeout(() => setCopied(""), 1500); };
 
   const setPlan = async (t: string) => {
+    if (t === "Enterprise") { toast("info", "Email info.bravehx@gmail.com for Enterprise onboarding"); return; }
     await supabase.from("subscription_stats").delete().eq("user_id", user.id);
     await supabase.from("subscription_stats").insert({ tier_name: t, user_id: user.id });
     setTier(t); toast("success", t === "Pro" ? "Upgraded to Pro. Stripe checkout arrives next." : "Moved to " + t);
@@ -106,6 +118,16 @@ export default function Dashboard() {
     </main>
   </>);
 
+  const dashMenu = [
+    { label: "Project Overview", href: "#overview" },
+    { label: "Projects & Keys", href: "#projects" },
+    { label: "Analytics", href: "#analytics" },
+    { label: "Plan & Billing", href: "#plan" },
+    { label: "Settings", href: "#settings" },
+    { label: "API Playground", href: "/test" },
+    { label: "Documentation", href: "/docs" },
+  ];
+
   const groups: { label: string; items: { id: Tab; label: string; Icon: any }[] }[] = [
     { label: "Platform", items: [
       { id: "overview", label: "Project Overview", Icon: Icons.Shield },
@@ -119,11 +141,10 @@ export default function Dashboard() {
   ];
 
   return (<>
-    <Navigation />
-    <main className="pt-28 pb-24 max-w-7xl mx-auto px-6">
-      <div className="grid lg:grid-cols-[240px_1fr] gap-8">
-        {/* Supabase-style sidebar */}
-        <aside className="lg:sticky lg:top-28 self-start">
+    <Navigation menu={dashMenu} />
+    <main className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6 w-full">
+      <div className="grid lg:grid-cols-[240px_1fr] gap-6 lg:gap-8">
+        <aside className="min-w-0 max-w-full lg:sticky lg:top-28 self-start">
           <div className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
             <div className="hidden lg:flex items-center gap-3 px-3 py-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-serif text-lg font-bold flex items-center justify-center shrink-0">{(user.email || "B")[0].toUpperCase()}</div>
@@ -133,32 +154,32 @@ export default function Dashboard() {
               </div>
             </div>
             {groups.map((g) => (
-              <div key={g.label} className="lg:mb-4">
+              <div key={g.label} className="lg:mb-4 shrink-0 lg:shrink">
                 <p className="hidden lg:block text-[11px] tracking-[0.2em] uppercase text-slate-600 px-3 mb-2">{g.label}</p>
                 {g.items.map((it) => (
-                  <button key={it.id} onClick={() => setTab(it.id)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap w-full text-left ${tab === it.id ? "bg-slate-800/80 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>
+                  <button key={it.id} onClick={() => go(it.id)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap w-full text-left ${tab === it.id ? "bg-slate-800/80 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>
                     <it.Icon className="w-4 h-4 shrink-0" />{it.label}
                   </button>
                 ))}
               </div>
             ))}
-            <div className="lg:mb-2">
+            <div className="lg:mb-2 shrink-0 lg:shrink">
               <p className="hidden lg:block text-[11px] tracking-[0.2em] uppercase text-slate-600 px-3 mb-2">Resources</p>
               <a href="/test" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-slate-900 whitespace-nowrap"><Icons.Terminal className="w-4 h-4" />API Playground</a>
               <a href="/docs" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-slate-900 whitespace-nowrap"><Icons.Globe className="w-4 h-4" />Documentation</a>
               <a href="https://github.com/brave290/bot-shield" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-slate-900 whitespace-nowrap"><Icons.Github className="w-4 h-4" />Source code</a>
             </div>
-            <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 whitespace-nowrap"><Icons.ArrowRight className="w-4 h-4 rotate-180" />Sign out</button>
+            <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 whitespace-nowrap shrink-0 lg:shrink"><Icons.ArrowRight className="w-4 h-4 rotate-180" />Sign out</button>
           </div>
         </aside>
 
-        <section className="min-w-0 space-y-6">
+        <section className="min-w-0 max-w-full space-y-6">
           {tab === "overview" && (<>
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-950 to-blue-950/30">
               <h1 className="font-serif text-3xl font-bold text-white mb-1">Welcome back.</h1>
               <p className="text-sm text-slate-400 font-light">Your shield is active. {net.blocked.toLocaleString()} bots blocked across the network so far.</p>
             </motion.div>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{projects.length}/{plan.maxProjects}</p><p className="text-xs text-slate-500 mt-1">Projects used</p></div>
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{net.total.toLocaleString()}</p><p className="text-xs text-slate-500 mt-1">Network requests (live)</p></div>
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{tier}</p><p className="text-xs text-slate-500 mt-1">Current plan</p></div>
@@ -178,15 +199,15 @@ export default function Dashboard() {
             <form onSubmit={createProject} className="p-6 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
               <h2 className="font-serif text-xl font-semibold text-white">New project</h2>
               <div className="flex flex-col sm:flex-row gap-4">
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name (e.g. my-shop)" className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" />
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name (e.g. my-shop)" className="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" />
                 <button type="submit" className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Create project</button>
               </div>
             </form>
             {projects.length === 0 && <div className="text-center py-14 border border-dashed border-slate-800 rounded-2xl"><p className="text-slate-500 font-light">No projects yet. Create your first one above.</p></div>}
             {projects.map((p) => (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
+              <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-6 rounded-2xl border border-slate-800 bg-slate-950">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3"><h2 className="font-serif text-xl font-semibold text-white">{p.name}</h2><span className="text-xs text-emerald-400 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Active</span></div>
+                  <div className="flex items-center gap-3 min-w-0"><h2 className="font-serif text-xl font-semibold text-white break-all">{p.name}</h2><span className="text-xs text-emerald-400 flex items-center gap-1.5 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Active</span></div>
                   <div className="flex gap-2">
                     <button onClick={() => rotateKeys(p)} className="px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 text-xs hover:bg-amber-500/10">Rotate keys</button>
                     <button onClick={() => deleteProject(p)} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 text-xs hover:bg-red-500/10">Delete</button>
@@ -194,13 +215,13 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <code className="flex-1 text-xs text-blue-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 font-mono break-all">{p.api_key}</code>
-                    <button onClick={() => copy(p.api_key, p.id + "a")} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500">{copied === p.id + "a" ? "Copied" : "Copy"}</button>
+                    <code className="flex-1 min-w-0 text-xs text-blue-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 font-mono break-all">{p.api_key}</code>
+                    <button onClick={() => copy(p.api_key, p.id + "a")} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500 shrink-0">{copied === p.id + "a" ? "Copied" : "Copy"}</button>
                   </div>
                   <div className="flex items-center gap-3">
-                    <code className="flex-1 text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 font-mono break-all">{revealed[p.id] ? p.secret_key : "bs_sec_••••••••••••••••"}</code>
-                    <button onClick={() => setRevealed({ ...revealed, [p.id]: !revealed[p.id] })} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500">{revealed[p.id] ? "Hide" : "Reveal"}</button>
-                    <button onClick={() => copy(p.secret_key, p.id + "s")} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500">{copied === p.id + "s" ? "Copied" : "Copy"}</button>
+                    <code className="flex-1 min-w-0 text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 font-mono break-all">{revealed[p.id] ? p.secret_key : "bs_sec_••••••••••••••••"}</code>
+                    <button onClick={() => setRevealed({ ...revealed, [p.id]: !revealed[p.id] })} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500 shrink-0">{revealed[p.id] ? "Hide" : "Reveal"}</button>
+                    <button onClick={() => copy(p.secret_key, p.id + "s")} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500 shrink-0">{copied === p.id + "s" ? "Copied" : "Copy"}</button>
                   </div>
                 </div>
                 <pre className="mt-5 p-4 rounded-xl bg-slate-900 border border-slate-800 text-[12px] leading-6 text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap">{`<script src="${origin}/bot-shield.js"\n        data-api-key="${p.api_key}"></script>`}</pre>
@@ -209,7 +230,7 @@ export default function Dashboard() {
           </>)}
 
           {tab === "analytics" && (<>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
                 <div className="flex items-center justify-between mb-2"><p className="text-xs text-slate-500">Network requests</p><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /></div>
                 <p className="font-serif text-4xl font-bold text-white tabular-nums">{net.total.toLocaleString()}</p>
@@ -229,47 +250,44 @@ export default function Dashboard() {
                 <div className="p-4 rounded-xl bg-slate-900 border border-slate-800"><p className="text-slate-500 text-xs mb-1">Request quota</p><p className="text-white font-medium">{plan.requests}</p></div>
                 <div className="p-4 rounded-xl bg-slate-900 border border-slate-800"><p className="text-slate-500 text-xs mb-1">Analytics retention</p><p className="text-white font-medium">{plan.analytics}</p></div>
               </div>
-              <p className="text-xs text-slate-600 font-light">Network figures stream live from production. Per-project breakdowns ship with the Pro analytics update.</p>
             </div>
           </>)}
 
           {tab === "plan" && (<>
-            <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div><h2 className="font-serif text-2xl font-bold text-white">{tier} plan</h2><p className="text-sm text-slate-500">{plan.price} · {plan.requests} · {plan.analytics} analytics</p></div>
-                {tier === "Hobby" ? (
-                  <button onClick={() => setPlan("Pro")} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Upgrade to Pro</button>
-                ) : (
-                  <button onClick={() => setPlan("Hobby")} className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 text-sm">Downgrade</button>
-                )}
-              </div>
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm text-emerald-400 font-medium mb-3">Included</h3>
-                  <ul className="space-y-2 text-sm text-slate-300 font-light">
-                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>Core behavioral detection</li>
-                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>{plan.maxProjects} projects</li>
-                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>{plan.requests} requests</li>
-                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>Full source access</li>
+            <div className="grid md:grid-cols-3 gap-4">
+              {Object.entries(PLANS).map(([pn, pl]: [string, any]) => (
+                <div key={pn} className={`relative p-6 rounded-2xl border ${tier === pn ? "border-blue-500 bg-blue-600/5" : "border-slate-800 bg-slate-950"}`}>
+                  {pn === "Pro" && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-blue-600 text-white text-[11px] font-medium whitespace-nowrap">Most popular</span>}
+                  <h3 className="font-serif text-xl font-semibold text-white">{pn}</h3>
+                  <p className="text-xs text-slate-500 font-light mb-4">{pn === "Hobby" ? "Side projects" : pn === "Pro" ? "Real products" : "Platforms"}</p>
+                  <p className="mb-5"><span className="font-serif text-4xl font-bold text-white">{pl.price}</span>{pl.price !== "Custom" && <span className="text-slate-500 text-sm"> /mo</span>}</p>
+                  <ul className="space-y-2.5 mb-6">
+                    {pl.feats.map((f: string) => (<li key={f} className="flex items-start gap-2 text-xs text-slate-300 font-light"><span className="text-blue-400 mt-0.5 shrink-0"><Icons.Check /></span>{f}</li>))}
                   </ul>
+                  {tier === pn ? (
+                    <p className="text-center text-xs text-blue-400 py-2.5 border border-blue-500/40 rounded-xl">Current plan</p>
+                  ) : (
+                    <button onClick={() => setPlan(pn)} className={`w-full py-2.5 rounded-xl text-xs font-medium ${pn === "Enterprise" ? "border border-slate-700 hover:border-slate-500 text-white" : "bg-blue-600 hover:bg-blue-500 text-white"}`}>Choose {pn}</button>
+                  )}
                 </div>
-                <div>
-                  <h3 className="text-sm text-slate-500 font-medium mb-3">{tier === "Pro" ? "Everything unlocked" : "Locked on free"}</h3>
-                  <ul className="space-y-2 text-sm text-slate-500 font-light">
-                    {plan.locked.map((l: string) => (<li key={l} className="flex gap-2"><Icons.Lock className="w-4 h-4 shrink-0" />{l}</li>))}
-                    {tier === "Pro" && <li className="flex gap-2 text-slate-300"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>All Pro features active</li>}
-                  </ul>
-                </div>
-              </div>
-              {tier === "Hobby" && <p className="text-xs text-slate-600 mt-6">Stripe checkout arrives next. Upgrades now are grace-period activations.</p>}
+              ))}
             </div>
+            {tier === "Hobby" && (
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
+                <h3 className="text-sm text-slate-500 font-medium mb-3">Locked on free</h3>
+                <ul className="space-y-2 text-sm text-slate-500 font-light">
+                  {plan.locked.map((l: string) => (<li key={l} className="flex gap-2"><Icons.Lock className="w-4 h-4 shrink-0" />{l}</li>))}
+                </ul>
+                <p className="text-xs text-slate-600 mt-5">Stripe checkout arrives next. Upgrades now are grace-period activations.</p>
+              </div>
+            )}
           </>)}
 
           {tab === "settings" && (<>
             <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
               <h2 className="font-serif text-xl font-semibold text-white">Security</h2>
               <div className="flex flex-col sm:flex-row gap-3">
-                <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} minLength={6} placeholder="New password" className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" />
+                <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} minLength={6} placeholder="New password" className="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" />
                 <button onClick={changePass} className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-sm text-white">Update password</button>
               </div>
             </div>

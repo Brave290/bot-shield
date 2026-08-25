@@ -5,8 +5,8 @@ import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/com
 import { Navigation } from "@/components/Navigation";
 
 const tiers = [
-  { name: "Hobby", price: "$0", tag: "Side projects", feats: ["1,000 requests / month", "Core behavioral detection", "Community support", "Full source access"] },
-  { name: "Pro", price: "$29", tag: "Real products", feats: ["100,000 requests / month", "Adaptive AI scoring", "Live analytics dashboard", "Priority email support", "99.9% uptime SLA"], hot: true },
+  { name: "Hobby", price: "0", tag: "Side projects", feats: ["1,000 requests / month", "Core behavioral detection", "Community support", "Full source access"] },
+  { name: "Pro", price: "29", tag: "Real products", feats: ["100,000 requests / month", "Adaptive AI scoring", "Live analytics dashboard", "Priority email support", "99.9% uptime SLA"], hot: true },
   { name: "Enterprise", price: "Custom", tag: "Platforms", feats: ["Unlimited requests", "Dedicated infrastructure", "On-premise deployment", "24/7 support with SLA"] },
 ];
 

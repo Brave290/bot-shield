@@ -16,6 +16,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: "history.scrollRestoration='manual';try{window.scrollTo(0,0);}catch(e){}" }} />
+      </head>
       <body className="bg-slate-950 text-slate-100 antialiased">{children}<Toaster /><ScrollReset /><ConfirmHost /></body>
     </html>
   );
