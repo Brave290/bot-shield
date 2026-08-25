@@ -1,3 +1,4 @@
+"use client";
 import { Icons } from "@/components/site";
 // ADMIN IP WHITELIST (activate with admin dashboard):
 // const ip = (await headers()).get("x-forwarded-for")?.split(",")[0];

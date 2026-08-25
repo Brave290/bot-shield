@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const score = calculateBotScore({ mouseData, typingData, fingerprint });
     const blocked = isBlocked(score, project.sensitivity);
-    const ipAddress = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+  const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
     await supabaseAdmin.from('verification_logs').insert({
       project_id: project.id, ip_address: ipAddress, browser_fingerprint: fingerprint,

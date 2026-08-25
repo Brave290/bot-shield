@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { Icons } from "@/components/site";
 export default function NotFound() {
