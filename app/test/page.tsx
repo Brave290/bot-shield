@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation, Footer } from "@/components/site";
 
 type LogLine = { t: string; kind: "in" | "ok" | "err" };
@@ -11,6 +11,13 @@ export default function TestPage() {
   const [log, setLog] = useState<LogLine[]>([]);
 
   const push = (kind: LogLine["kind"], t: string) => setLog((l) => [...l, { kind, t }]);
+
+  useEffect(() => {
+    fetch("/api/demo-keys")
+      .then((r) => r.json())
+      .then((d) => { if (d.apiKey) { setApiKey((k) => k || d.apiKey); setSecretKey((k) => k || d.secretKey); } })
+      .catch(() => {});
+  }, []);
 
   const challenge = async (label: string, payload: unknown) => {
     push("in", "POST /api/challenge — " + label);

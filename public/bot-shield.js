@@ -1,132 +1,64 @@
-/**
- * BotShield Lightweight Widget
- * Layer 11 (Bundle Size): Pure Vanilla JS, zero dependencies, <5KB.
- * Layer 12 (Security): Generates basic fingerprint and securely transmits data.
- */
-(function() {
-  'use strict';
+(function () {
+  "use strict";
+  var script = document.currentScript;
+  if (!script) return;
+  var apiKey = script.getAttribute("data-api-key") || "";
+  var origin;
+  try { origin = new URL(script.src, window.location.href).origin; } catch (e) { origin = window.location.origin; }
 
-  // 1. Get configuration from the script tag
-  const currentScript = document.currentScript;
-  const API_KEY = currentScript.getAttribute('data-api-key');
-  const API_URL = currentScript.getAttribute('data-api-url') || window.location.origin;
+  var start = Date.now();
+  var mouse = { distance: 0, curves: 0, pauses: 0, lastX: null, lastY: null, lastT: null, dir: null };
+  var typing = { chars: 0, backspaces: 0, first: null, last: null };
+  var token = "";
 
-  if (!API_KEY) {
-    console.error('[BotShield] Missing data-api-key attribute.');
-    return;
+  document.addEventListener("mousemove", function (e) {
+    var now = Date.now();
+    if (mouse.lastX !== null) {
+      var dx = e.clientX - mouse.lastX, dy = e.clientY - mouse.lastY;
+      mouse.distance += Math.round(Math.sqrt(dx * dx + dy * dy));
+      var dir = (dx > 0 ? "r" : dx < 0 ? "l" : "") + (dy > 0 ? "d" : dy < 0 ? "u" : "");
+      if (mouse.dir && dir && dir !== mouse.dir) mouse.curves += 1;
+      mouse.dir = dir || mouse.dir;
+      if (mouse.lastT && now - mouse.lastT > 700) mouse.pauses += 1;
+    }
+    mouse.lastX = e.clientX; mouse.lastY = e.clientY; mouse.lastT = now;
+  }, { passive: true });
+
+  document.addEventListener("keydown", function (e) {
+    var now = Date.now();
+    if (!typing.first) typing.first = now;
+    typing.last = now;
+    if (e.key === "Backspace") typing.backspaces += 1; else typing.chars += 1;
+  }, { passive: true });
+
+  function fingerprint() {
+    return [navigator.language, navigator.hardwareConcurrency || 0, screen.width + "x" + screen.height, new Date().getTimezoneOffset()].join("|");
   }
 
-  // 2. State tracking
-  const state = {
-    mouse: { distance: 0, curves: 0, lastX: 0, lastY: 0, startTime: Date.now(), moved: false },
-    typing: { totalChars: 0, backspaces: 0, startTime: 0, isTyping: false },
-    token: null
-  };
-
-  // 3. Mouse Tracking Logic
-  document.addEventListener('mousemove', function(e) {
-    if (!state.mouse.moved) {
-      state.mouse.moved = true;
-      state.mouse.lastX = e.clientX;
-      state.mouse.lastY = e.clientY;
-      return;
-    }
-
-    const dx = e.clientX - state.mouse.lastX;
-    const dy = e.clientY - state.mouse.lastY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    state.mouse.distance += distance;
-    
-    // If the movement is jagged (not a straight line), count it as a curve (Human trait)
-    if (Math.abs(dx) > 5 && Math.abs(dy) > 5) {
-      state.mouse.curves += 1;
-    }
-
-    state.mouse.lastX = e.clientX;
-    state.mouse.lastY = e.clientY;
-  });
-
-  // 4. Typing Tracking Logic
-  document.addEventListener('keydown', function(e) {
-    if (!state.typing.isTyping) {
-      state.typing.isTyping = true;
-      state.typing.startTime = Date.now();
-    }
-    
-    state.typing.totalChars += 1;
-    if (e.key === 'Backspace') {
-      state.typing.backspaces += 1;
-    }
-  });
-
-  // 5. Basic Fingerprint (Layer 12)
-  function getFingerprint() {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.textBaseline = 'top';
-    ctx.font = '14px Arial';
-    ctx.fillText('BotShield-FP', 2, 2);
-    return canvas.toDataURL().slice(-50); // Simple hash substitute
-  }
-
-  // 6. Send data to API and get token
-  async function requestToken() {
-    const mouseTime = Date.now() - state.mouse.startTime;
-    const typingTime = state.typing.isTyping ? (Date.now() - state.typing.startTime) : 1000;
-
-    const payload = {
-      apiKey: API_KEY,
-      mouseData: {
-        distance: Math.round(state.mouse.distance),
-        time: mouseTime,
-        curves: state.mouse.curves
-      },
-      typingData: {
-        totalChars: state.typing.totalChars,
-        totalTime: typingTime,
-        backspaces: state.typing.backspaces
-      },
-      fingerprint: getFingerprint()
+  function submit() {
+    var payload = {
+      apiKey: apiKey,
+      mouseData: { distance: mouse.distance, time: Date.now() - start, curves: mouse.curves, pauses: mouse.pauses },
+      typingData: { totalChars: typing.chars, totalTime: (typing.last && typing.first) ? typing.last - typing.first : 0, backspaces: typing.backspaces },
+      fingerprint: fingerprint()
     };
-
-    try {
-      const response = await fetch(`${API_URL}/api/challenge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      
-      if (data.status === 'passed' && data.token) {
-        state.token = data.token;
-        // Inject token into any form with the class 'bot-shield-form'
-        injectTokenIntoForms();
-      } else {
-        console.warn('[BotShield] Challenge failed or blocked.', data);
-      }
-    } catch (err) {
-      console.error('[BotShield] Network error:', err);
-    }
+    fetch(origin + "/api/challenge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.token) {
+          token = d.token;
+          document.querySelectorAll("form").forEach(function (f) {
+            if (!f.querySelector("input[name=bot_shield_token]")) {
+              var i = document.createElement("input");
+              i.type = "hidden"; i.name = "bot_shield_token"; i.value = token;
+              f.appendChild(i);
+            }
+          });
+        }
+      })
+      .catch(function () { /* fail open: never block real users */ });
   }
 
-  // 7. Inject token into forms
-  function injectTokenIntoForms() {
-    const forms = document.querySelectorAll('form.bot-shield-form');
-    forms.forEach(form => {
-      let input = form.querySelector('input[name="bot_shield_token"]');
-      if (!input) {
-        input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'bot_shield_token';
-        form.appendChild(input);
-      }
-      input.value = state.token;
-    });
-  }
-
-  // 8. Initialize: Wait 3 seconds for user to interact, then request token
-  setTimeout(requestToken, 3000);
-
+  setTimeout(submit, 4000);
+  window.botShield = { getToken: function () { return token; }, refresh: submit };
 })();

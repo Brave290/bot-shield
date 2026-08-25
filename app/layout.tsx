@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/toast";
+import { ScrollReset } from "@/components/scroll-reset";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["400", "500", "600", "700", "800"], style: ["normal", "italic"] });
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="bg-slate-950 text-slate-100 antialiased">{children}<Toaster /></body>
+      <body className="bg-slate-950 text-slate-100 antialiased">{children}<Toaster /><ScrollReset /></body>
     </html>
   );
 }
