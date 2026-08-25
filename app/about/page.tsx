@@ -1,4 +1,5 @@
 "use client";
+"use client";
 import { motion } from "framer-motion";
 import { Icons, Navigation, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
 

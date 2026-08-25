@@ -1,3 +1,4 @@
+"use client";
 import { Navigation, Footer, PageHero, Icons } from "@/components/site";
 const items = [
   ["Hashed identifiers", "Visitor IPs are SHA-256 hashed in transit at the API layer. Raw addresses never touch a disk."],
