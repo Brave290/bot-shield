@@ -58,7 +58,7 @@ export function Navigation() {
             <Icons.Search />
           </button>
           {/* Theme toggle */}
-          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme" className="hidden sm:flex w-10 h-10 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors">
+          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme" className="flex w-10 h-10 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors">
             {theme === "dark" ? <Icons.Sun /> : <Icons.Moon />}
           </button>
           <MotionLink href="/dashboard" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors">

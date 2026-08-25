@@ -67,3 +67,12 @@ a, button { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
 /* Premium card hover */
 .group:hover { transform: translateY(-4px); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Light mode consistency */
+html.light .bg-gradient-to-b, html.light .bg-gradient-to-t, html.light .bg-gradient-to-br, html.light .bg-gradient-to-r { background: linear-gradient(180deg, #f8fafc, #eef2f7) !important; }
+html.light .text-blue-300 { color: #1d4ed8 !important; }
+html.light .text-blue-400 { color: #2563eb !important; }
+html.light .text-emerald-400 { color: #059669 !important; }
+html.light .text-red-400 { color: #dc2626 !important; }
+html.light pre, html.light code { background: #e2e8f0 !important; border-color: #cbd5e1 !important; }
+html.light .bg-blue-600 { background: #2563eb !important; }

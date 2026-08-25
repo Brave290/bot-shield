@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 "use client";
 import { motion } from "framer-motion";
 import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
@@ -31,7 +32,7 @@ export default function PricingPage() {
               {t.hot && <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-medium">Most popular</span>}
               <h3 className="font-serif text-2xl font-semibold text-white">{t.name}</h3>
               <p className="text-sm text-slate-500 font-light mt-1">{t.tag}</p>
-              <div className="mt-6 mb-8"><span className="font-serif text-5xl font-bold text-white">{t.price}</span>{t.price !== "Custom" && <span className="text-slate-500 text-sm"> /mo</span>}</div>
+              <div className="mt-6 mb-8"><span className="font-serif text-5xl font-bold text-white">{prices[t.name]?.price ?? t.price}</span>{t.price !== "Custom" && <span className="text-slate-500 text-sm"> /mo</span>}</div>
               <ul className="space-y-3.5 mb-10">
                 {t.feats.map((f) => (<li key={f} className="flex items-start gap-3 text-sm text-slate-300 font-light"><span className="mt-0.5 text-blue-400"><Icons.Check /></span>{f}</li>))}
               </ul>

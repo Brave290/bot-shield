@@ -29,7 +29,7 @@ export default function DocsPage() {
               ))}
             </nav>
           </aside>
-          <div className="lg:col-span-3 space-y-10">
+          <div className="lg:col-span-3 space-y-10 min-w-0">
             {sections.map((s, i) => (
               <motion.section key={s.id} id={s.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} className="p-8 rounded-2xl border border-slate-800 bg-slate-950">
                 <h2 className="font-serif text-2xl font-semibold text-white mb-4">{s.title}</h2>
