@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@supabase/supabase-js";
 import { Icons, MotionLink, Navigation, Footer, Preloader, CTASection } from "@/components/site";
 import DailyVisitorsBadge from "@/components/DailyVisitorsBadge";
+import { ComparisonSection, IntegrationsSection } from "@/components/extra";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const fadeUp = { initial: { opacity: 0, y: 40 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" } };
@@ -151,7 +152,7 @@ export default function Home() {
   return (<>
     <Preloader />
     <Navigation />
-    <main><Hero /><Marquee /><LiveStats /><Features /><FAQ /><CTASection /></main>
+    <main><Hero /><Marquee /><LiveStats /><Features /><ComparisonSection /><IntegrationsSection /><FAQ /><CTASection /></main>
     <Footer />
   </>);
 }
