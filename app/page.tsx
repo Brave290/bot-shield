@@ -1,4 +1,5 @@
 "use client";
+import { Preloader } from "@/components/site";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@supabase/supabase-js";
