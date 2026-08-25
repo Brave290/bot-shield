@@ -6,13 +6,12 @@ export async function POST(req: Request) {
     const { name, email, message } = await req.json();
     if (!name || !email || !message) return NextResponse.json({ error: "All fields are required" }, { status: 400 });
 
-    // Always store in database (admin can read later)
     await supabaseAdmin.from("contact_messages").insert({ name, email, message });
 
-    // If Resend key exists, also email it
     const key = process.env.RESEND_API_KEY;
+    let emailed = false;
     if (key) {
-      await fetch("https://api.resend.com/emails", {
+      const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -22,8 +21,9 @@ export async function POST(req: Request) {
           text: `${message}\n\n— ${name} (${email})`,
         }),
       });
+      emailed = r.ok;
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, emailed });
   } catch {
     return NextResponse.json({ error: "Failed to send" }, { status: 500 });
   }

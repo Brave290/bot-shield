@@ -18,3 +18,17 @@ body { font-family: var(--font-inter); background: #020617; }
 .animate-float-slow { animation: float-slow 7s ease-in-out infinite; }
 @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 .animate-scan { animation: scan 3.5s ease-in-out infinite; }
+
+/* Performance: skip offscreen rendering */
+section { content-visibility: auto; contain-intrinsic-size: 1px 800px; }
+
+/* Smooth but cheap: only animate transform/opacity */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* Prevent any horizontal sway on small screens */
+@media (max-width: 640px) {
+  h1 { font-size: clamp(2.2rem, 9vw, 3.5rem); }
+}
