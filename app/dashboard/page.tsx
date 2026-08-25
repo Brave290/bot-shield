@@ -143,9 +143,10 @@ export default function Dashboard() {
   return (<>
     <Navigation menu={dashMenu} />
     <main className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6 w-full">
+      <div className="lg:hidden flex justify-end mb-4"><button onClick={async () => { await supabase.auth.signOut(); setUser(null); }} className="px-4 py-2 rounded-lg border border-red-500/40 text-red-400 text-xs">Sign out</button></div>
       <div className="grid lg:grid-cols-[240px_1fr] gap-6 lg:gap-8">
-        <aside className="min-w-0 max-w-full lg:sticky lg:top-28 self-start">
-          <div className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
+        <aside className="hidden lg:block min-w-0 max-w-full lg:sticky lg:top-28 self-start">
+          <div className="flex flex-col gap-1">
             <div className="hidden lg:flex items-center gap-3 px-3 py-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-serif text-lg font-bold flex items-center justify-center shrink-0">{(user.email || "B")[0].toUpperCase()}</div>
               <div className="min-w-0">

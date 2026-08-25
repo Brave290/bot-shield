@@ -104,7 +104,7 @@ export function Navigation({ menu }: { menu?: { label: string; href: string }[] 
             <nav className="space-y-2">
               {(menu || links).map((l, i) => (
                 <motion.div key={l.href} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }}>
-                  <Link href={l.href} onClick={() => setMenuOpen(false)} className="group flex items-center justify-between py-4 border-b border-slate-800/60">
+                  <Link href={l.href} onClick={() => { setMenuOpen(false); if (l.href.startsWith("#")) { window.location.hash = l.href.slice(1); } }} className="group flex items-center justify-between py-4 border-b border-slate-800/60">
                     <span className="font-serif text-4xl text-white group-hover:italic group-hover:text-blue-400 transition-colors">{l.label}</span>
                     <Icons.ArrowRight className="w-6 h-6 text-slate-600 group-hover:text-blue-400 transition-all" />
                   </Link>
