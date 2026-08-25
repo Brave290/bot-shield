@@ -16,7 +16,7 @@ const PLANS: Record<string, any> = {
   Pro: { price: "$29", maxProjects: 10, requests: "100K / mo", analytics: "90 days", locked: [] },
 };
 
-type Tab = "overview" | "projects" | "plan" | "settings";
+type Tab = "overview" | "projects" | "analytics" | "plan" | "settings";
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -27,10 +27,9 @@ export default function Dashboard() {
   const [name, setName] = useState("");
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState("");
-  const [net, setNet] = useState({ total: 0, blocked: 0 });
   const [newPass, setNewPass] = useState("");
+  const [net, setNet] = useState({ total: 0, blocked: 0 });
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-
   const plan = PLANS[tier] || PLANS.Hobby;
 
   const load = async (uid: string) => {
@@ -64,26 +63,22 @@ export default function Dashboard() {
   const createProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || name.trim().length < 2) { toast("error", "Project name must be at least 2 characters"); return; }
-    if (projects.length >= plan.maxProjects) { toast("error", `Free plan allows ${plan.maxProjects} projects. Upgrade to Pro for more.`); return; }
+    if (projects.length >= plan.maxProjects) { toast("error", plan.maxProjects + " projects max on " + tier + ". Upgrade to Pro for more."); return; }
     const { error } = await supabase.from("projects").insert({ user_id: user.id, name: name.trim(), api_key: gen("bs_live_"), secret_key: gen("bs_sec_") });
     if (error) { toast("error", error.message); return; }
-    setName("");
-    await load(user.id);
-    toast("success", "Project created. Keys are live.");
+    setName(""); await load(user.id); toast("success", "Project created. Keys are live.");
   };
 
   const rotateKeys = async (p: any) => {
     if (!(await ask({ title: "Rotate keys", message: "Revoke current keys and generate new ones for " + p.name + "? Old keys stop working immediately.", confirmLabel: "Rotate" }))) return;
     await supabase.from("projects").update({ api_key: gen("bs_live_"), secret_key: gen("bs_sec_") }).eq("id", p.id);
-    await load(user.id);
-    toast("success", "Keys rotated. Old keys are dead.");
+    await load(user.id); toast("success", "Keys rotated. Old keys are dead.");
   };
 
   const deleteProject = async (p: any) => {
     if (!(await ask({ title: "Delete project", message: "Delete " + p.name + " permanently? This cannot be undone.", confirmLabel: "Delete", danger: true }))) return;
     await supabase.from("projects").delete().eq("id", p.id);
-    await load(user.id);
-    toast("success", "Project deleted");
+    await load(user.id); toast("success", "Project deleted");
   };
 
   const copy = async (text: string, id: string) => { await navigator.clipboard.writeText(text); setCopied(id); toast("success", "Copied to clipboard"); setTimeout(() => setCopied(""), 1500); };
@@ -91,8 +86,7 @@ export default function Dashboard() {
   const setPlan = async (t: string) => {
     await supabase.from("subscription_stats").delete().eq("user_id", user.id);
     await supabase.from("subscription_stats").insert({ tier_name: t, user_id: user.id });
-    setTier(t);
-    toast("success", t === "Pro" ? "Upgraded to Pro. Stripe checkout arrives next — enjoy the grace period." : "Moved to " + t);
+    setTier(t); toast("success", t === "Pro" ? "Upgraded to Pro. Stripe checkout arrives next." : "Moved to " + t);
   };
 
   const changePass = async () => {
@@ -112,49 +106,70 @@ export default function Dashboard() {
     </main>
   </>);
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "projects", label: `Projects (${projects.length}/${plan.maxProjects})` },
-    { id: "plan", label: "Plan & billing" },
-    { id: "settings", label: "Settings" },
+  const groups: { label: string; items: { id: Tab; label: string; Icon: any }[] }[] = [
+    { label: "Platform", items: [
+      { id: "overview", label: "Project Overview", Icon: Icons.Shield },
+      { id: "projects", label: "Projects & Keys", Icon: Icons.Chip },
+      { id: "analytics", label: "Analytics", Icon: Icons.Chart },
+    ]},
+    { label: "Account", items: [
+      { id: "plan", label: "Plan & Billing", Icon: Icons.Bolt },
+      { id: "settings", label: "Settings", Icon: Icons.Lock },
+    ]},
   ];
 
   return (<>
     <Navigation />
     <main className="pt-28 pb-24 max-w-7xl mx-auto px-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-serif text-xl font-bold flex items-center justify-center shrink-0">{(user.email || "B")[0].toUpperCase()}</div>
-          <div className="min-w-0">
-            <h1 className="font-serif text-2xl font-bold text-white break-all">{user.email}</h1>
-            <p className="text-xs text-slate-500">{tier} plan · Member since {new Date(user.created_at || Date.now()).toLocaleDateString()}</p>
+      <div className="grid lg:grid-cols-[240px_1fr] gap-8">
+        {/* Supabase-style sidebar */}
+        <aside className="lg:sticky lg:top-28 self-start">
+          <div className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
+            <div className="hidden lg:flex items-center gap-3 px-3 py-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-serif text-lg font-bold flex items-center justify-center shrink-0">{(user.email || "B")[0].toUpperCase()}</div>
+              <div className="min-w-0">
+                <p className="text-sm text-white font-medium break-all leading-tight">{user.email}</p>
+                <p className="text-[11px] text-slate-500">{tier} plan</p>
+              </div>
+            </div>
+            {groups.map((g) => (
+              <div key={g.label} className="lg:mb-4">
+                <p className="hidden lg:block text-[11px] tracking-[0.2em] uppercase text-slate-600 px-3 mb-2">{g.label}</p>
+                {g.items.map((it) => (
+                  <button key={it.id} onClick={() => setTab(it.id)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap w-full text-left ${tab === it.id ? "bg-slate-800/80 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>
+                    <it.Icon className="w-4 h-4 shrink-0" />{it.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div className="lg:mb-2">
+              <p className="hidden lg:block text-[11px] tracking-[0.2em] uppercase text-slate-600 px-3 mb-2">Resources</p>
+              <a href="/test" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-slate-900 whitespace-nowrap"><Icons.Terminal className="w-4 h-4" />API Playground</a>
+              <a href="/docs" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-slate-900 whitespace-nowrap"><Icons.Globe className="w-4 h-4" />Documentation</a>
+              <a href="https://github.com/brave290/bot-shield" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-slate-900 whitespace-nowrap"><Icons.Github className="w-4 h-4" />Source code</a>
+            </div>
+            <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 whitespace-nowrap"><Icons.ArrowRight className="w-4 h-4 rotate-180" />Sign out</button>
           </div>
-        </div>
-        <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${tier === "Pro" ? "bg-blue-500/10 text-blue-400" : "bg-slate-800 text-slate-400"}`}>{tier}</span>
-      </div>
-
-      <div className="grid lg:grid-cols-[220px_1fr] gap-8">
-        <aside className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap text-left ${tab === t.id ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>{t.label}</button>
-          ))}
         </aside>
 
         <section className="min-w-0 space-y-6">
           {tab === "overview" && (<>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-950 to-blue-950/30">
+              <h1 className="font-serif text-3xl font-bold text-white mb-1">Welcome back.</h1>
+              <p className="text-sm text-slate-400 font-light">Your shield is active. {net.blocked.toLocaleString()} bots blocked across the network so far.</p>
+            </motion.div>
+            <div className="grid sm:grid-cols-3 gap-4">
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{projects.length}/{plan.maxProjects}</p><p className="text-xs text-slate-500 mt-1">Projects used</p></div>
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{net.total.toLocaleString()}</p><p className="text-xs text-slate-500 mt-1">Network requests (live)</p></div>
-              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{net.blocked.toLocaleString()}</p><p className="text-xs text-slate-500 mt-1">Bots blocked (live)</p></div>
-              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{plan.analytics}</p><p className="text-xs text-slate-500 mt-1">Analytics retention</p></div>
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{tier}</p><p className="text-xs text-slate-500 mt-1">Current plan</p></div>
             </div>
             <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
               <h2 className="font-serif text-xl font-semibold text-white mb-4">Quick start</h2>
               <ol className="space-y-3 text-sm text-slate-400 font-light list-decimal list-inside">
-                <li>Create a project in the Projects tab.</li>
-                <li>Copy the script tag into your website's HTML.</li>
+                <li>Create a project under Projects & Keys.</li>
+                <li>Paste the generated script tag into your site.</li>
                 <li>Verify tokens on your backend with your secret key.</li>
-                <li>Test everything at <a href="/test" className="text-blue-400 hover:underline">/test</a> with live demo keys.</li>
+                <li>Stress-test everything in the <a href="/test" className="text-blue-400 hover:underline">API Playground</a>.</li>
               </ol>
             </div>
           </>)}
@@ -167,10 +182,11 @@ export default function Dashboard() {
                 <button type="submit" className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Create project</button>
               </div>
             </form>
+            {projects.length === 0 && <div className="text-center py-14 border border-dashed border-slate-800 rounded-2xl"><p className="text-slate-500 font-light">No projects yet. Create your first one above.</p></div>}
             {projects.map((p) => (
               <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <h2 className="font-serif text-xl font-semibold text-white">{p.name}</h2>
+                  <div className="flex items-center gap-3"><h2 className="font-serif text-xl font-semibold text-white">{p.name}</h2><span className="text-xs text-emerald-400 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Active</span></div>
                   <div className="flex gap-2">
                     <button onClick={() => rotateKeys(p)} className="px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 text-xs hover:bg-amber-500/10">Rotate keys</button>
                     <button onClick={() => deleteProject(p)} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 text-xs hover:bg-red-500/10">Delete</button>
@@ -192,6 +208,31 @@ export default function Dashboard() {
             ))}
           </>)}
 
+          {tab === "analytics" && (<>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
+                <div className="flex items-center justify-between mb-2"><p className="text-xs text-slate-500">Network requests</p><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /></div>
+                <p className="font-serif text-4xl font-bold text-white tabular-nums">{net.total.toLocaleString()}</p>
+              </div>
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
+                <div className="flex items-center justify-between mb-2"><p className="text-xs text-slate-500">Bots blocked</p><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /></div>
+                <p className="font-serif text-4xl font-bold text-white tabular-nums">{net.blocked.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950 space-y-5">
+              <h2 className="font-serif text-xl font-semibold text-white">Your usage</h2>
+              <div>
+                <div className="flex justify-between text-xs text-slate-500 mb-2"><span>Projects</span><span>{projects.length} / {plan.maxProjects}</span></div>
+                <div className="h-2 rounded-full bg-slate-800 overflow-hidden"><div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: Math.min(100, (projects.length / plan.maxProjects) * 100) + "%" }} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800"><p className="text-slate-500 text-xs mb-1">Request quota</p><p className="text-white font-medium">{plan.requests}</p></div>
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800"><p className="text-slate-500 text-xs mb-1">Analytics retention</p><p className="text-white font-medium">{plan.analytics}</p></div>
+              </div>
+              <p className="text-xs text-slate-600 font-light">Network figures stream live from production. Per-project breakdowns ship with the Pro analytics update.</p>
+            </div>
+          </>)}
+
           {tab === "plan" && (<>
             <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -206,21 +247,21 @@ export default function Dashboard() {
                 <div>
                   <h3 className="text-sm text-emerald-400 font-medium mb-3">Included</h3>
                   <ul className="space-y-2 text-sm text-slate-300 font-light">
-                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />Core behavioral detection</li>
-                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />{plan.maxProjects} projects</li>
-                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />{plan.requests} requests</li>
-                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />Full source access</li>
+                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>Core behavioral detection</li>
+                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>{plan.maxProjects} projects</li>
+                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>{plan.requests} requests</li>
+                    <li className="flex gap-2"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>Full source access</li>
                   </ul>
                 </div>
                 <div>
                   <h3 className="text-sm text-slate-500 font-medium mb-3">{tier === "Pro" ? "Everything unlocked" : "Locked on free"}</h3>
                   <ul className="space-y-2 text-sm text-slate-500 font-light">
-                    {plan.locked.map((l: string) => (<li key={l} className="flex gap-2"><Icons.Lock className="w-4 h-4" />{l}</li>))}
-                    {tier === "Pro" && <li className="flex gap-2 text-slate-300"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />All Pro features active</li>}
+                    {plan.locked.map((l: string) => (<li key={l} className="flex gap-2"><Icons.Lock className="w-4 h-4 shrink-0" />{l}</li>))}
+                    {tier === "Pro" && <li className="flex gap-2 text-slate-300"><span className="text-emerald-400 shrink-0"><Icons.Check /></span>All Pro features active</li>}
                   </ul>
                 </div>
               </div>
-              {tier === "Hobby" && <p className="text-xs text-slate-600 mt-6">Stripe checkout arrives next. Upgrades now are grace-period manual activations.</p>}
+              {tier === "Hobby" && <p className="text-xs text-slate-600 mt-6">Stripe checkout arrives next. Upgrades now are grace-period activations.</p>}
             </div>
           </>)}
 
@@ -238,7 +279,6 @@ export default function Dashboard() {
               <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl border border-slate-800 hover:border-blue-500/40 transition-colors"><Icons.Chip /><span className="text-sm text-slate-300">Supabase console (your data)</span></a>
               <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl border border-slate-800 hover:border-blue-500/40 transition-colors"><Icons.Mail /><span className="text-sm text-slate-300">Resend (email delivery)</span></a>
             </div>
-            <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }} className="px-6 py-3 rounded-xl border border-red-500/40 text-red-400 text-sm hover:bg-red-500/10">Sign out</button>
           </>)}
         </section>
       </div>
