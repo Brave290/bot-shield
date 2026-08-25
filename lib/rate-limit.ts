@@ -13,7 +13,6 @@ export async function checkRateLimit(
   limitId: string,
   scopeValue: string
 ): Promise<RateLimitResult> {
-  // Get rate limit config
   const { data: config } = await supabaseAdmin
     .from("rate_limits")
     .select("*")
@@ -24,11 +23,9 @@ export async function checkRateLimit(
     return { allowed: true, remaining: Infinity, resetInSeconds: 0, limit: Infinity };
   }
 
-  // Hash the scope value for privacy
   const scopeKey = createHash("sha256").update(scopeValue).digest("hex");
-
-  // Count attempts within window
   const windowStart = new Date(Date.now() - config.window_seconds * 1000);
+  
   const { count } = await supabaseAdmin
     .from("rate_limit_events")
     .select("*", { count: "exact", head: true })
@@ -40,7 +37,6 @@ export async function checkRateLimit(
   const remaining = Math.max(0, config.max_attempts - attempts);
   const allowed = attempts < config.max_attempts;
 
-  // If not allowed, calculate reset time
   let resetInSeconds = 0;
   if (!allowed) {
     const { data: oldest } = await supabaseAdmin
@@ -59,7 +55,6 @@ export async function checkRateLimit(
     }
   }
 
-  // Record this attempt (even if blocked, for accurate counting)
   if (allowed) {
     await supabaseAdmin.from("rate_limit_events").insert({
       limit_id: limitId,
