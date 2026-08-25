@@ -1,3 +1,4 @@
+"use client";
 import { Navigation } from "@/components/Navigation";
 import { Footer, PageHero, Icons } from "@/components/site";
 const items = [

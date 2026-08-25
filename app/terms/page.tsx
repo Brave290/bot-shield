@@ -1,3 +1,4 @@
+"use client";
 import { Navigation } from "@/components/Navigation";
 import { Footer, PageHero } from "@/components/site";
 const S = ({ t, b }: { t: string; b: string }) => (<section className="mb-8"><h2 className="font-serif text-2xl font-semibold text-white mb-3">{t}</h2><p className="text-slate-400 font-light leading-relaxed">{b}</p></section>);
