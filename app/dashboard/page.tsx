@@ -50,6 +50,18 @@ export default function Dashboard() {
     await load(user.id);
   };
 
+  const rotateKeys = async (p: any) => {
+    if (!confirm("Revoke current keys and generate new ones for " + p.name + "? Old keys stop working immediately.")) return;
+    await supabase.from("projects").update({ api_key: gen("bs_live_"), secret_key: gen("bs_sec_") }).eq("id", p.id);
+    await load(user.id);
+  };
+
+  const deleteProject = async (p: any) => {
+    if (!confirm("Delete " + p.name + " permanently? This cannot be undone.")) return;
+    await supabase.from("projects").delete().eq("id", p.id);
+    await load(user.id);
+  };
+
   const copy = async (text: string, id: string) => { await navigator.clipboard.writeText(text); setCopied(id); setTimeout(() => setCopied(""), 1500); };
   const changePass = async () => { const { error } = await supabase.auth.updateUser({ password: newPass }); setPassMsg(error ? error.message : "Password updated."); setNewPass(""); };
 
@@ -102,6 +114,10 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-serif text-xl font-semibold text-white">{p.name}</h2>
               <span className="text-xs text-emerald-400 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Active</span>
+              </div>
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => rotateKeys(p)} className="px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 text-xs hover:bg-amber-500/10">Rotate keys</button>
+                <button onClick={() => deleteProject(p)} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 text-xs hover:bg-red-500/10">Delete project</button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
