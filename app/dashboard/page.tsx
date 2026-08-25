@@ -70,10 +70,9 @@ export default function Dashboard() {
     <main className="pt-32 pb-20 max-w-6xl mx-auto px-6">
       {/* Profile header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-950 to-blue-950/30 flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white font-serif text-2xl font-bold flex items-center justify-center">{(user.email || "B")[0].toUpperCase()}</div>
-          <div>
-            <h1 className="font-serif text-2xl font-bold text-white">{user.email}</h1>
+          <div className="min-w-0"><h1 className="font-serif text-lg sm:text-xl md:text-2xl font-bold text-white break-all">{user.email}</h1>
             <p className="text-xs text-slate-500">Free plan · Member since {new Date(user.created_at || Date.now()).toLocaleDateString()}</p>
           </div>
         </div>
