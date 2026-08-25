@@ -11,6 +11,11 @@ export async function GET(req: Request) {
   if (type === "applications") { const { data } = await desc("job_applications"); return NextResponse.json(data || []); }
   if (type === "pricing") { const { data } = await supabaseAdmin.from("plan_pricing").select("*"); return NextResponse.json(data || []); }
   if (type === "admins") { const { data } = await supabaseAdmin.from("admins").select("*").order("created_at"); return NextResponse.json(data || []); }
+  if (type === "settings") {
+    const { data } = await supabaseAdmin.from("platform_settings").select("*").eq("key", "resend_api_key").single();
+    const v = data?.value || "";
+    return NextResponse.json({ masked: v ? v.slice(0, 3) + "••••" + v.slice(-4) : "" });
+  }
   if (type === "stats") {
     const [m, a, p, ad] = await Promise.all([
       supabaseAdmin.from("contact_messages").select("*", { count: "exact", head: true }),
@@ -68,6 +73,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (body.action === "save-setting") {
+    if (body.key !== "resend_api_key" || !body.value) return NextResponse.json({ error: "Invalid setting" }, { status: 400 });
+    await supabaseAdmin.from("platform_settings").upsert({ key: body.key, value: body.value }, { onConflict: "key" });
+    return NextResponse.json({ ok: true });
+  }
   if (body.action === "delete-message") { await supabaseAdmin.from("contact_messages").delete().eq("id", body.id); return NextResponse.json({ ok: true }); }
   if (body.action === "delete-application") { await supabaseAdmin.from("job_applications").delete().eq("id", body.id); return NextResponse.json({ ok: true }); }
 

@@ -19,6 +19,7 @@ function Hero() {
       <div className="relative max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center w-full">
         <div>
           <div className="mb-8"><DailyVisitorsBadge /></div>
+          <p className="mb-6 text-xs font-light tracking-[0.25em] uppercase text-slate-600">Public beta v{(process.env.APP_VERSION || "1.4").split(".").slice(0, 2).join(".")}</p>
           <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }} className="font-serif text-5xl md:text-6xl xl:text-7xl font-bold text-white leading-[1.08]">
             Master your security with <span className="italic font-medium text-blue-400">intelligence.</span><br />Protect your users today.
           </motion.h1>

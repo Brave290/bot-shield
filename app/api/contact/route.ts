@@ -8,18 +8,14 @@ export async function POST(req: Request) {
 
     await supabaseAdmin.from("contact_messages").insert({ name, email, message });
 
-    const key = process.env.RESEND_API_KEY;
+    const { data: setting } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "resend_api_key").single();
+    const key = setting?.value || process.env.RESEND_API_KEY;
     let emailed = false;
     if (key) {
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "BotShield <onboarding@resend.dev>",
-          to: ["info.bravehx@gmail.com"],
-          subject: `[BotShield] Message from ${name}`,
-          text: `${message}\n\n— ${name} (${email})`,
-        }),
+        body: JSON.stringify({ from: "BotShield <onboarding@resend.dev>", to: ["info.bravehx@gmail.com"], subject: `[BotShield] Message from ${name}`, text: `${message}\n\n— ${name} (${email})` }),
       });
       emailed = r.ok;
     }

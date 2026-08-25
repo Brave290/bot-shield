@@ -34,7 +34,8 @@ section { content-visibility: auto; contain-intrinsic-size: 1px 800px; }
 }
 
 /* Reduce font size globally */
-html { font-size: 97%; }
+html { font-size: 90%; }
+@media (min-width: 1024px) { html { font-size: 100%; } }
 
 /* Light theme */
 html.light { background: #f8fafc; }
