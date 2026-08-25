@@ -65,7 +65,15 @@ export default function Dashboard() {
   const copy = async (text: string, id: string) => { await navigator.clipboard.writeText(text); setCopied(id); setTimeout(() => setCopied(""), 1500); };
   const changePass = async () => { const { error } = await supabase.auth.updateUser({ password: newPass }); setPassMsg(error ? error.message : "Password updated."); setNewPass(""); };
 
-  if (loading) return <div className="min-h-screen bg-slate-950" />;
+  if (loading) return (<>
+    <Navigation />
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="text-center">
+        <div className="mx-auto w-12 h-12 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin" />
+        <p className="mt-4 text-sm text-slate-500">Loading your workspace...</p>
+      </div>
+    </div>
+  </>);
 
   if (!user) return (<>
     <Navigation />
