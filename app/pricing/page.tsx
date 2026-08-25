@@ -20,6 +20,13 @@ const compare = [
 ];
 
 export default function PricingPage() {
+  const [prices, setPrices] = useState<Record<string, { price: string; tag: string }>>({});
+  useEffect(() => {
+    fetch("/api/stats/realtime")
+      .then((r) => r.json())
+      .then((d) => setPrices(d.pricing || {}))
+      .catch(() => {});
+  }, []);
   return (
     <>
       <Navigation />
