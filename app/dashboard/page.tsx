@@ -40,7 +40,13 @@ export default function Dashboard() {
     const { data } = await supabase.from("projects").select("*").eq("user_id", uid).order("created_at", { ascending: false });
     setProjects(data || []);
     const { data: sub } = await supabase.from("subscription_stats").select("tier_name").eq("user_id", uid).single();
-    setTier(sub?.tier_name || "Hobby");
+    let t = sub?.tier_name || "Hobby";
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const r = await fetch("/api/admin/data?type=me", { headers: { Authorization: "Bearer " + (sess?.session?.access_token || "") } });
+      if (r.ok) { const me = await r.json(); if (me.role === "owner") t = "Enterprise"; else if (me.role === "admin" && t === "Hobby") t = "Pro"; } }
+    } catch {}
+    setTier(t);
   };
 
   useEffect(() => {
