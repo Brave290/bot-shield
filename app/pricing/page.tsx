@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-"use client";
 import { motion } from "framer-motion";
 import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
