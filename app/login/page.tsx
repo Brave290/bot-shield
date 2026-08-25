@@ -3,7 +3,8 @@ import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Icons, Navigation, Footer } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 

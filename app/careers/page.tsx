@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { createClient } from "@supabase/supabase-js";
-import { Icons, Navigation, Footer, PageHero } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const roles = ["Senior Backend Engineer", "Security Researcher", "Developer Advocate"];

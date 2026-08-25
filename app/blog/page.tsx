@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Icons, Navigation, Footer, PageHero } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 export default function Blog() {
   const [posts, setPosts] = useState<any[]>([]);

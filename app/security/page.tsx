@@ -1,5 +1,6 @@
 "use client";
-import { Navigation, Footer, PageHero, Icons } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 const items = [
   ["Hashed identifiers", "Visitor IPs are SHA-256 hashed in transit at the API layer. Raw addresses never touch a disk."],
   ["Row-Level Security", "Every Postgres table ships with RLS policies. Projects are invisible across accounts by database law, not app hope."],

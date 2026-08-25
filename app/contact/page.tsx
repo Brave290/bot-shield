@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Icons, Navigation, Footer, PageHero, CONTACTS } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 type Errors = { name?: string; email?: string; message?: string };
 
@@ -10,7 +11,7 @@ export default function Contact() {
   const [emailed, setEmailed] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [errors, setErrors] = useState<Errors>({});
-  const [touched, setTouched] = useState<Errors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const validate = (f = form): Errors => {
     const e: Errors = {};
@@ -20,7 +21,7 @@ export default function Contact() {
     return e;
   };
 
-  const onBlur = (k: keyof Errors) => { setTouched({ ...touched, [k]: true }); setErrors(validate()); };
+  const onBlur = (k: string) => { setTouched({ ...touched, [k]: true }); setErrors(validate()); };
   const onChange = (k: keyof typeof form, v: string) => {
     const next = { ...form, [k]: v };
     setForm(next);

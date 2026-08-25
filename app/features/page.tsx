@@ -1,7 +1,8 @@
 "use client";
 "use client";
 import { motion } from "framer-motion";
-import { Icons, Navigation, Footer, PageHero, CTASection } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const blocks = [
   { Icon: Icons.Eye, title: "Behavioral biometrics", body: "Every human moves differently. Pointer curvature, hesitation, acceleration, keystroke rhythm. BotShield builds a live behavioral profile in the first seconds of a session and scores it against known bot signatures.", points: ["Pointer entropy and curve analysis", "Keystroke cadence profiling", "Session timing heuristics"] },

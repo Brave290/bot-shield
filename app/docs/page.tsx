@@ -2,7 +2,8 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Icons, Navigation, Footer, PageHero } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const sections = [
   { id: "quickstart", title: "Quickstart", body: "Add the widget to any page. It works with plain HTML, React, Vue, Svelte, or a 2009-era PHP template. If it renders HTML, it works.", code: '<script\n  src="https://cdn.botshield.dev/widget.js"\n  data-api-key="bs_live_your_key"\n  data-api-url="https://api.botshield.dev"\n></script>' },

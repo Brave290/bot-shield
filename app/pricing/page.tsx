@@ -1,7 +1,8 @@
 "use client";
 "use client";
 import { motion } from "framer-motion";
-import { Icons, MotionLink, Navigation, Footer, PageHero } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const tiers = [
   { name: "Hobby", price: "$0", tag: "Side projects", feats: ["1,000 requests / month", "Core behavioral detection", "Community support", "Full source access"] },

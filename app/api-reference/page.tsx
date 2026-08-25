@@ -1,7 +1,8 @@
 "use client";
 "use client";
 import { motion } from "framer-motion";
-import { Navigation, Footer, PageHero } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const endpoints = [
   { method: "POST", path: "/api/challenge", desc: "Submit behavioral telemetry and receive a signed pass token, or a 403 block.", params: [["apiKey", "string", "Your public project key"], ["mouseData", "object", "distance, time, curves"], ["typingData", "object", "totalChars, totalTime, backspaces"], ["fingerprint", "string", "Canvas-derived hash"]] },

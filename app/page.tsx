@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@supabase/supabase-js";
-import { Icons, MotionLink, Navigation, Footer, Preloader, CTASection } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 import DailyVisitorsBadge from "@/components/DailyVisitorsBadge";
 import { ComparisonSection, IntegrationsSection } from "@/components/extra";
 

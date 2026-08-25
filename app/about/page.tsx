@@ -1,7 +1,8 @@
 "use client";
 "use client";
 import { motion } from "framer-motion";
-import { Icons, Navigation, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
 
 const values = [
   { Icon: Icons.Eye, t: "User-centered", b: "Every decision starts with the person on the other side of the screen. If a feature annoys real users, it does not ship." },
