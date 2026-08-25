@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Icons } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
+import { ask } from "@/components/confirm";
+import { BrandLoader } from "@/components/loader";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 type Tab = "overview" | "messages" | "applications" | "pricing" | "admins";
@@ -68,7 +70,7 @@ export default function Admin() {
     </main>
   </>);
 
-  if (state === "loading") return (<><Navigation /><div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="mx-auto w-12 h-12 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin" /></div></>);
+  if (state === "loading") return (<><Navigation /><BrandLoader /></>);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
@@ -190,7 +192,7 @@ export default function Admin() {
                   <p className="text-xs text-slate-500 font-light mb-4">Hands the entire project to another person. You become a regular admin. This cannot be undone unless they transfer it back.</p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input value={transferTo} onChange={(e) => setTransferTo(e.target.value)} placeholder="new-owner@email.com" className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500/60" />
-                    <button onClick={() => { if (transferTo && confirm("Transfer FULL ownership to " + transferTo + "? You will become a regular admin.")) act({ action: "transfer", email: transferTo }, "Ownership transferred"); }} className="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium">Transfer</button>
+                    <button onClick={async () => { if (transferTo && await ask({ title: "Transfer ownership", message: "Transfer FULL ownership to " + transferTo + "? You become a regular admin. Cannot be undone unless they transfer back.", confirmLabel: "Transfer", danger: true })) act({ action: "transfer", email: transferTo }, "Ownership transferred"); }} className="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium">Transfer</button>
                   </div>
                 </div>
               )}

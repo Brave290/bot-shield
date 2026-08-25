@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Icons, MotionLink } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
+import { ask } from "@/components/confirm";
+import { BrandLoader } from "@/components/loader";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const gen = (p: string) => p + Array.from(crypto.getRandomValues(new Uint8Array(24))).map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
@@ -25,6 +27,7 @@ export default function Dashboard() {
   const [name, setName] = useState("");
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState("");
+  const [net, setNet] = useState({ total: 0, blocked: 0 });
   const [newPass, setNewPass] = useState("");
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -51,6 +54,13 @@ export default function Dashboard() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const loadNet = () => fetch("/api/stats/realtime").then((r) => r.json()).then((x) => setNet({ total: x.totalRequests || 0, blocked: x.blockedBots || 0 })).catch(() => {});
+    loadNet();
+    const iv = setInterval(loadNet, 15000);
+    return () => clearInterval(iv);
+  }, []);
+
   const createProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || name.trim().length < 2) { toast("error", "Project name must be at least 2 characters"); return; }
@@ -63,14 +73,14 @@ export default function Dashboard() {
   };
 
   const rotateKeys = async (p: any) => {
-    if (!confirm("Revoke current keys and generate new ones for " + p.name + "?")) return;
+    if (!(await ask({ title: "Rotate keys", message: "Revoke current keys and generate new ones for " + p.name + "? Old keys stop working immediately.", confirmLabel: "Rotate" }))) return;
     await supabase.from("projects").update({ api_key: gen("bs_live_"), secret_key: gen("bs_sec_") }).eq("id", p.id);
     await load(user.id);
     toast("success", "Keys rotated. Old keys are dead.");
   };
 
   const deleteProject = async (p: any) => {
-    if (!confirm("Delete " + p.name + " permanently?")) return;
+    if (!(await ask({ title: "Delete project", message: "Delete " + p.name + " permanently? This cannot be undone.", confirmLabel: "Delete", danger: true }))) return;
     await supabase.from("projects").delete().eq("id", p.id);
     await load(user.id);
     toast("success", "Project deleted");
@@ -90,7 +100,7 @@ export default function Dashboard() {
     if (error) toast("error", error.message); else { toast("success", "Password updated"); setNewPass(""); }
   };
 
-  if (loading) return (<><Navigation /><div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="mx-auto w-12 h-12 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin" /></div></>);
+  if (loading) return (<><Navigation /><BrandLoader /></>);
 
   if (!user) return (<>
     <Navigation />
@@ -132,9 +142,10 @@ export default function Dashboard() {
 
         <section className="min-w-0 space-y-6">
           {tab === "overview" && (<>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{projects.length}/{plan.maxProjects}</p><p className="text-xs text-slate-500 mt-1">Projects used</p></div>
-              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{plan.requests}</p><p className="text-xs text-slate-500 mt-1">Request quota</p></div>
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{net.total.toLocaleString()}</p><p className="text-xs text-slate-500 mt-1">Network requests (live)</p></div>
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{net.blocked.toLocaleString()}</p><p className="text-xs text-slate-500 mt-1">Bots blocked (live)</p></div>
               <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950"><p className="font-serif text-3xl font-bold text-white">{plan.analytics}</p><p className="text-xs text-slate-500 mt-1">Analytics retention</p></div>
             </div>
             <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
@@ -195,17 +206,17 @@ export default function Dashboard() {
                 <div>
                   <h3 className="text-sm text-emerald-400 font-medium mb-3">Included</h3>
                   <ul className="space-y-2 text-sm text-slate-300 font-light">
-                    <li className="flex gap-2"><Icons.Check className="text-emerald-400" />Core behavioral detection</li>
-                    <li className="flex gap-2"><Icons.Check className="text-emerald-400" />{plan.maxProjects} projects</li>
-                    <li className="flex gap-2"><Icons.Check className="text-emerald-400" />{plan.requests} requests</li>
-                    <li className="flex gap-2"><Icons.Check className="text-emerald-400" />Full source access</li>
+                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />Core behavioral detection</li>
+                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />{plan.maxProjects} projects</li>
+                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />{plan.requests} requests</li>
+                    <li className="flex gap-2"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />Full source access</li>
                   </ul>
                 </div>
                 <div>
                   <h3 className="text-sm text-slate-500 font-medium mb-3">{tier === "Pro" ? "Everything unlocked" : "Locked on free"}</h3>
                   <ul className="space-y-2 text-sm text-slate-500 font-light">
                     {plan.locked.map((l: string) => (<li key={l} className="flex gap-2"><Icons.Lock className="w-4 h-4" />{l}</li>))}
-                    {tier === "Pro" && <li className="flex gap-2 text-slate-300"><Icons.Check className="text-emerald-400" />All Pro features active</li>}
+                    {tier === "Pro" && <li className="flex gap-2 text-slate-300"><Icons.Check className="w-4 h-4 text-emerald-400 shrink-0" />All Pro features active</li>}
                   </ul>
                 </div>
               </div>
