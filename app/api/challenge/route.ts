@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey });
       return NextResponse.json({ status: "blocked", reason: "Rate limit exceeded (100/min)" }, { status: 429 });
     }
-    await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey }); (Critical #3)
+    await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey }); 
     // For now, we proceed to scoring
     
     let score = 50;
