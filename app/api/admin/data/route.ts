@@ -21,6 +21,10 @@ export async function GET(req: Request) {
   if (type === "pricing") { const { data } = await supabaseAdmin.from("plan_pricing").select("*"); return NextResponse.json(data || []); }
   if (type === "admins") { const { data } = await supabaseAdmin.from("admins").select("*").order("created_at"); return NextResponse.json(data || []); }
   if (type === "audit") { const { data } = await supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50); return NextResponse.json(data || []); }
+  if (type === "rate_limits") {
+    const { data } = await supabaseAdmin.from("rate_limits").select("*");
+    return NextResponse.json(data || []);
+  }
   if (type === "projects") {
     const { data } = await supabaseAdmin.from("projects").select("id,name,api_key,mode,allowed_ips,blocked_ips,rate_limit_per_min");
     for (const p of data || []) {
@@ -113,6 +117,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (body.action === "save-rate-limit") {
+    await supabaseAdmin.from("rate_limits").update({ max_attempts: body.max_attempts, window_seconds: body.window_seconds, enabled: body.enabled }).eq("id", body.id);
+    return NextResponse.json({ ok: true });
+  }
   if (body.action === "delete-project") {
     const { data: project } = await supabaseAdmin.from("projects").select("*").eq("id", body.id).single();
     if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
