@@ -69,7 +69,7 @@ export default function Admin() {
   if (state === "denied") return (<>
     <Navigation />
     <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="mb-10 mt-6">
+      {me && (<> <div className="mb-10 mt-6">
         <p className="text-xs uppercase tracking-widest text-slate-600 mb-3">Quick links</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <a href="/admin/rate-limits" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Rate limits</a>
@@ -83,7 +83,7 @@ export default function Admin() {
           <button onClick={() => setTab("ping")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Ping / cron</button>
           <button onClick={() => setTab("messages")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Messages</button>
         </div>
-      </div>
+      </div> </>)}
       <div className="mb-10">
         <p className="text-xs uppercase tracking-widest text-slate-600 mb-3">Quick links</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

@@ -1,7 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-  const [latency, setLatency] = useState<number | null>(null);
-  const [usage, setUsage] = useState<any>(null);
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 import { Icons, MotionLink } from "@/components/site";
@@ -24,6 +22,7 @@ const TABS: Tab[] = ["overview", "projects", "analytics", "plan", "settings"];
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
+  const [usage, setUsage] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("overview");
   const [projects, setProjects] = useState<any[]>([]);
