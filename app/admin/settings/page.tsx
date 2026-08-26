@@ -39,6 +39,13 @@ export default function AdminSettings() {
     toast(next ? "error" : "success", next ? "Maintenance mode ON — public site is down for visitors" : "Maintenance mode OFF — site is live");
   };
 
+  const testEmail = async () => {
+    const res = await fetch("/api/admin/data", { method: "POST", headers: await headers(), body: JSON.stringify({ action: "test-email" }) });
+    const d = await res.json();
+    if (!res.ok) { toast("error", d.error || "Failed to send"); return; }
+    toast("success", "Test email sent - check your inbox");
+  };
+
   return (<>
     <Navigation />
     <main className="pt-32 pb-28 max-w-3xl mx-auto px-6 space-y-6">
@@ -70,6 +77,7 @@ export default function AdminSettings() {
         </div>
         <input type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="re_..." className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-blue-500/60" />
         <button onClick={saveKey} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Save key</button>
+        <button onClick={testEmail} className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 text-sm font-medium">Send test email</button>
       </div>
     </main>
   </>);

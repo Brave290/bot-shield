@@ -102,11 +102,11 @@ function LiveStats() {
 
 function Features() {
   const f = [
-    [Icons.Bolt, "Featherweight by design", "The widget ships under 5KB, smaller than one product photo. Your Core Web Vitals stay untouched."],
+    [Icons.Bolt, "Featherweight by design", "The widget ships lightweight by design, smaller than one product photo. Your Core Web Vitals stay untouched."],
     [Icons.Lock, "Cryptographic verification", "Every pass issues a short-lived signed JWT. Your backend verifies in one call. No secrets in the browser."],
-    [Icons.Eye, "Behavioral analysis", "Mouse curvature, keystroke cadence, pointer entropy. Bots cannot fake the micro-details."],
+    [Icons.Eye, "Behavioral analysis", "Mouse curvature, keystroke cadence, pointer entropy. Behavioral signals make automation hard to fake."],
     [Icons.Chart, "Honest analytics", "Live dashboards fed straight from the production database. No sampling, no painted numbers."],
-    [Icons.Globe, "Edge-close verification", "Round trips under 50ms for 95% of the world, keeping protection invisible."],
+    [Icons.Globe, "Edge-close verification", "Optimized for low-latency verification., keeping protection invisible."],
     [Icons.Chip, "Adaptive scoring", "Rule-based today, learning tomorrow. New signals plug in without breaking your integration."],
   ] as const;
   return (

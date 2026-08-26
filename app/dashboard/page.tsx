@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+  const [latency, setLatency] = useState<number | null>(null);
+  const [usage, setUsage] = useState<any>(null);
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 import { Icons, MotionLink } from "@/components/site";
@@ -53,6 +55,14 @@ export default function Dashboard() {
     setTier(t);
   };
 
+    useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const r = await fetch("/api/usage", { headers: { Authorization: "Bearer " + (data.session?.access_token || "") } });
+      if (r.ok) setUsage(await r.json());
+    })();
+  }, []);
+
   useEffect(() => {
     const applyHash = () => { const h = window.location.hash.replace("#", "") as Tab; if (TABS.includes(h)) setTab(h); };
     applyHash();
@@ -98,7 +108,7 @@ export default function Dashboard() {
 
   const deleteProject = async (p: any) => {
     if (!(await ask({ title: "Delete project", message: "Delete " + p.name + " permanently? This cannot be undone.", confirmLabel: "Delete", danger: true }))) return;
-    await supabase.from("projects").delete().eq("id", p.id);
+    await fetch("/api/projects/delete", { method: "POST", headers: { Authorization: "Bearer " + ((await supabase.auth.getSession()).data.session?.access_token || ""), "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id }) });
     await load(user.id); toast("success", "Project deleted");
   };
 
@@ -116,7 +126,9 @@ export default function Dashboard() {
     if (error) toast("error", error.message); else { toast("success", "Password updated"); setNewPass(""); }
   };
 
-  if (loading) return (<><Navigation /><BrandLoader /></>);
+  ;
+
+  return (<><Navigation /><BrandLoader /></>);
 
   if (!user) return (<>
     <Navigation />
@@ -149,6 +161,17 @@ export default function Dashboard() {
       { id: "settings", label: "Settings", Icon: Icons.Lock },
     ]},
   ];
+
+  const deleteAccount = async () => {
+    if (!await ask({ title: "Delete account", message: "This permanently deletes your account, every project and all logs.", confirmLabel: "Delete forever", danger: true })) return;
+    const { data } = await supabase.auth.getSession();
+    const res = await fetch("/api/account/delete", { method: "POST", headers: { Authorization: "Bearer " + (data.session?.access_token || "") } });
+    if (!res.ok) { toast("error", "Failed to delete account"); return; }
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  }
+
+  if (loading) return (<><Navigation /><BrandLoader /></>);
 
   return (<>
     <Navigation menu={dashMenu} />
@@ -311,7 +334,22 @@ export default function Dashboard() {
           </>)}
         </section>
       </div>
-    </main>
+    <section className="mt-16 grid lg:grid-cols-2 gap-6">
+        <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
+          <h2 className="text-white font-semibold mb-4">Usage & limits</h2>
+          {usage && (<>
+            <p className="text-sm text-slate-400 font-light">Today: <span className="text-white font-medium">{usage.today}</span> requests · This month: <span className="text-white font-medium">{usage.month}</span></p>
+            <div className="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden"><div className="h-full bg-blue-600" style={{ width: usage.quota > 0 ? Math.min(100, (usage.month / usage.quota) * 100) + "%" : "2%" }} /></div>
+            <p className="text-xs text-slate-500 mt-2">{usage.tier} plan · {usage.quota > 0 ? usage.quota.toLocaleString() + " requests/month" : "Unlimited"} · Rate limit {usage.perMinute} req/{usage.windowSeconds}s</p>
+          </>)}
+        </div>
+        <div className="p-6 rounded-2xl border border-red-500/30 bg-red-500/5">
+          <h2 className="text-red-400 font-semibold mb-2">Danger zone</h2>
+          <p className="text-xs text-slate-500 font-light mb-4">Deletes your account, every project, and all logs. Permanent.</p>
+          <button onClick={deleteAccount} className="px-5 py-2.5 rounded-lg border border-red-500/40 text-red-400 text-sm hover:bg-red-500/10">Delete my account</button>
+        </div>
+      </section>
+      </main>
     <footer className="border-t border-slate-800/60 py-8">
       <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-slate-600">© 2026 BotShield · BraveHX Studio</p>

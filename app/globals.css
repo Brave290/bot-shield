@@ -64,10 +64,12 @@ html.light .border-slate-700 { border-color: #94a3b8 !important; }
 .animate-scale-in { animation: scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
 /* Smooth hover transitions */
-a, button { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+a, button { transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease; }
 
 /* Premium card hover */
-.group:hover { transform: translateY(-4px); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.card-hover:hover {
+  transform: translateY(-4px);
+}
 
 /* Light mode consistency */
 html.light .bg-gradient-to-b, html.light .bg-gradient-to-t, html.light .bg-gradient-to-br, html.light .bg-gradient-to-r { background: linear-gradient(180deg, #f8fafc, #eef2f7) !important; }

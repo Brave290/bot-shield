@@ -62,7 +62,8 @@ export default function Admin() {
   const saveRules = async (p: any) => {
     const list = (id: string) => ((document.getElementById(id) as HTMLInputElement)?.value || "").split(",").map((s) => s.trim()).filter(Boolean);
     const mode = (document.getElementById(`md-${p.id}`) as HTMLSelectElement)?.value || "active";
-    await act({ action: "update-project", id: p.id, mode, allowed_ips: list(`al-${p.id}`), blocked_ips: list(`bl-${p.id}`) }, "Rules saved for " + p.name);
+    const rlVal = (document.getElementById(`rl-${p.id}`) as HTMLInputElement)?.value || "";
+    await act({ action: "update-project", id: p.id, mode, allowed_ips: list(`al-${p.id}`), blocked_ips: list(`bl-${p.id}`), rate_limit_per_min: rlVal }, "Rules saved for " + p.name);
   };
 
   if (state === "denied") return (<>

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     // RATE LIMIT: Read config from database (default 100 req / 60s if not configured)
     const { data: rateConfig } = await supabaseAdmin.from("rate_limits").select("*").eq("endpoint", "/api/challenge").single();
-    const maxAttempts = rateConfig?.max_attempts || 100;
+    const maxAttempts = project.rate_limit_per_min || rateConfig?.max_attempts || 100;
     const windowSeconds = rateConfig?.window_seconds || 60;
 
     const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();

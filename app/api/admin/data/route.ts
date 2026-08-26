@@ -21,7 +21,14 @@ export async function GET(req: Request) {
   if (type === "pricing") { const { data } = await supabaseAdmin.from("plan_pricing").select("*"); return NextResponse.json(data || []); }
   if (type === "admins") { const { data } = await supabaseAdmin.from("admins").select("*").order("created_at"); return NextResponse.json(data || []); }
   if (type === "audit") { const { data } = await supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50); return NextResponse.json(data || []); }
-  if (type === "projects") { const { data } = await supabaseAdmin.from("projects").select("id,name,api_key,mode,allowed_ips,blocked_ips"); return NextResponse.json(data || []); }
+  if (type === "projects") {
+    const { data } = await supabaseAdmin.from("projects").select("id,name,api_key,mode,allowed_ips,blocked_ips,rate_limit_per_min");
+    for (const p of data || []) {
+      const { data: last } = await supabaseAdmin.from("verification_logs").select("created_at").eq("project_id", p.id).order("created_at", { ascending: false }).limit(1);
+      (p as any).last_active = last?.[0]?.created_at || null;
+    }
+    return NextResponse.json(data || []);
+  }
   if (type === "settings") {
     const { data } = await supabaseAdmin.from("platform_settings").select("*");
     const map: Record<string, string> = {}; (data || []).forEach((r: any) => { map[r.key] = r.value; });
@@ -68,7 +75,7 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "update-project") {
-    const clean = { mode: body.mode === "shadow" ? "shadow" : "active", allowed_ips: Array.isArray(body.allowed_ips) ? body.allowed_ips : [], blocked_ips: Array.isArray(body.blocked_ips) ? body.blocked_ips : [] };
+    const clean: any = { mode: body.mode === "shadow" ? "shadow" : "active", allowed_ips: Array.isArray(body.allowed_ips) ? body.allowed_ips : [], blocked_ips: Array.isArray(body.blocked_ips) ? body.blocked_ips : [], rate_limit_per_min: body.rate_limit_per_min ? parseInt(body.rate_limit_per_min) : null };
     const { error } = await supabaseAdmin.from("projects").update(clean).eq("id", body.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await log("update_project", body.id);
@@ -103,6 +110,27 @@ export async function POST(req: Request) {
     await supabaseAdmin.from("admins").update({ role: "admin" }).eq("role", "owner");
     await supabaseAdmin.from("admins").upsert({ email, role: "owner", added_by: admin.email }, { onConflict: "email" });
     await log("transfer_ownership", email);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "delete-project") {
+    const { data: project } = await supabaseAdmin.from("projects").select("*").eq("id", body.id).single();
+    if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    await supabaseAdmin.from("verification_logs").delete().eq("project_id", body.id);
+    await supabaseAdmin.from("rate_limit_events").delete().eq("scope_key", project.api_key);
+    await supabaseAdmin.from("projects").delete().eq("id", body.id);
+    await log("delete_project", body.id);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "test-email") {
+    const { data: settings } = await supabaseAdmin.from("platform_settings").select("*");
+    const map: Record<string, string> = {}; (settings || []).forEach((r: any) => { map[r.key] = r.value; });
+    const key = map["resend_api_key"];
+    if (!key) return NextResponse.json({ error: "No Resend key saved" }, { status: 400 });
+    const res = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ from: map["resend_from_email"] || "BotShield <onboarding@resend.dev>", to: [admin.email], subject: "BotShield test email", html: "<p>If you can read this, Resend is configured correctly.</p>" }) });
+    const out = await res.text();
+    if (!res.ok) return NextResponse.json({ error: "Resend error: " + out.slice(0, 300) }, { status: 502 });
     return NextResponse.json({ ok: true });
   }
 
