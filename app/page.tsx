@@ -68,15 +68,18 @@ function Marquee() {
 
 function LiveStats() {
   const [s, setS] = useState({ t: 0, b: 0 });
+  const [latency, setLatency] = useState<number | null>(null);
+  const [projectsProtected, setProjectsProtected] = useState(0);
+  useEffect(() => { fetch("/api/stats/realtime").then((r) => r.json()).then((d) => setProjectsProtected(d.projects || 0)).catch(() => {}); }, []);
   useEffect(() => {
-    const load = async () => { try { const r = await fetch("/api/stats/realtime"); const d = await r.json(); setS({ t: d.totalRequests || 0, b: d.blockedBots || 0 }); } catch (_) {} };
+    const load = async () => { try { const r = await (async () => { const t0 = performance.now(); const r = await fetch("/api/stats/realtime"); setLatency(Math.max(1, Math.round(performance.now() - t0))); return r; })(); const d = await r.json(); setS({ t: d.totalRequests || 0, b: d.blockedBots || 0 }); } catch (_) {} };
     load();
     const ch = supabase.channel("ls").on("postgres_changes", { event: "UPDATE", schema: "public", table: "request_metrics" }, (p) => setS({ t: p.new.total_requests, b: p.new.blocked_requests })).subscribe();
     const iv = setInterval(load, 30000);
     return () => { supabase.removeChannel(ch); clearInterval(iv); };
   }, []);
   const fmt = (n: number) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n));
-  const items = [["Requests analyzed", fmt(s.t)], ["Bots blocked", fmt(s.b)], ["Median response", "48ms"], ["Uptime, 90 days", "99.98%"]];
+  const items = [["Requests analyzed", fmt(s.t)], ["Bots blocked", fmt(s.b)], ["Median response", "48ms"], ["Projects protected", "99.98%"]];
   return (
     <section className="py-24">
       <div className="max-w-7xl mx-auto px-6">

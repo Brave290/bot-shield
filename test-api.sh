@@ -1,6 +1,6 @@
 #!/bin/bash
-API_KEY="REDACTED_API_KEY_2"
-SECRET_KEY="REDACTED_SECRET_KEY_1"
+API_KEY="REDACTED_API_KEY_1"
+SECRET_KEY="REDACTED_SECRET_KEY_2"
 
 echo "=== Testing Challenge Endpoint ==="
 CHALLENGE=$(curl -s -X POST https://bo-tshield.vercel.app/api/challenge \

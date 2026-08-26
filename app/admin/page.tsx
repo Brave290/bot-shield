@@ -22,6 +22,7 @@ export default function Admin() {
   const [audit, setAudit] = useState<any[]>([]);
   const [pings, setPings] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [myIp, setMyIp] = useState("");
   const [stats, setStats] = useState<any>({});
   const [newAdmin, setNewAdmin] = useState("");
   const [transferTo, setTransferTo] = useState("");
@@ -41,7 +42,7 @@ export default function Admin() {
     setState("ready");
   }, [headers]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { loadAll(); fetch("/api/my-ip").then((r) => r.json()).then((d) => setMyIp(d.ip || "")).catch(() => {}); }, [loadAll]);
 
   const act = async (body: any, successMsg: string) => {
     const res = await fetch("/api/admin/data", { method: "POST", headers: await headers(), body: JSON.stringify(body) });
@@ -172,6 +173,13 @@ export default function Admin() {
           {tab === "rules" && (
             <div className="space-y-4">
               <p className="text-xs text-slate-500 font-light">Per-project controls: shadow mode logs without blocking; whitelist always allows; blacklist always blocks. Comma-separate IPs.</p>
+              <div className="p-5 rounded-2xl border border-blue-500/30 bg-blue-500/5 flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-white text-sm font-medium">Your current IP</p><code className="text-xs text-blue-300 font-mono">{myIp || "detecting..."}</code></div>
+                <div className="flex gap-2">
+                  <button onClick={async () => { await navigator.clipboard.writeText(myIp); toast("success", "IP copied"); }} className="px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-300">Copy</button>
+                  <button onClick={async () => { for (const p of projects) { const ips = p.allowed_ips || []; if (myIp && !ips.includes(myIp)) await act({ action: "update-project", id: p.id, mode: p.mode || "active", allowed_ips: [...ips, myIp], blocked_ips: p.blocked_ips || [] }, ""); } toast("success", "Your IP whitelisted on all projects"); }} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs">Whitelist me everywhere</button>
+                </div>
+              </div>
               {projects.map((p) => (
                 <div key={p.id} className="p-6 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
