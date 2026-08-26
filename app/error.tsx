@@ -1,23 +1,41 @@
 "use client";
-"use client";
+
 import { useEffect } from "react";
-import { motion } from "framer-motion";
-import { Icons, MotionLink } from "@/components/site";
-export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {}, []);
+import { Icons } from "@/components/site";
+import { Navigation } from "@/components/Navigation";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    // Log the error to an error reporting service (e.g., Sentry)
+    console.error("🚨 BotShield Application Error:", error);
+  }, [error]);
+
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-red-950/20 via-slate-950 to-slate-950" />
-      <div className="relative max-w-2xl text-center">
-        <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mx-auto w-20 h-20 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mb-10"><Icons.Shield className="w-9 h-9" /></motion.div>
-        <p className="text-xs tracking-[0.35em] uppercase text-red-400 mb-6">Error 500 — internal fault</p>
-        <h1 className="font-serif text-5xl md:text-7xl font-bold text-white leading-tight">The shield <span className="italic text-red-400">slipped.</span></h1>
-        <p className="mt-6 text-lg text-slate-400 font-light">Something failed on our side. Engineers are paged and investigating right now.</p>
-        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-          <motion.button onClick={reset} whileHover={{ scale: 1.04 }} className="px-8 py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium">Try again</motion.button>
-          <MotionLink href="/" whileHover={{ scale: 1.04 }} className="px-8 py-4 rounded-xl border border-slate-700 hover:border-slate-500 text-white font-medium">Back to safety</MotionLink>
+    <>
+      <Navigation />
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mb-6">
+            <Icons.Shield className="w-8 h-8" />
+          </div>
+          <h1 className="font-serif text-3xl font-bold text-white mb-3">Something went wrong.</h1>
+          <p className="text-slate-400 font-light mb-6">
+            {error.message || "An unexpected error occurred. Please try again."}
+          </p>
+          <button
+            onClick={() => reset()}
+            className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+          >
+            Try again
+          </button>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

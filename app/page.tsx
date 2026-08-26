@@ -69,7 +69,7 @@ function Marquee() {
 function LiveStats() {
   const [s, setS] = useState({ t: 0, b: 0 });
   useEffect(() => {
-    const load = async () => { try { const r = await fetch("/api/stats/realtime"); const d = await r.json(); setS({ t: d.totalRequests || 0, b: d.blockedBots || 0 }); } catch {} };
+    const load = async () => { try { const r = await fetch("/api/stats/realtime"); const d = await r.json(); setS({ t: d.totalRequests || 0, b: d.blockedBots || 0 }); } catch (_) {} };
     load();
     const ch = supabase.channel("ls").on("postgres_changes", { event: "UPDATE", schema: "public", table: "request_metrics" }, (p) => setS({ t: p.new.total_requests, b: p.new.blocked_requests })).subscribe();
     const iv = setInterval(load, 30000);
