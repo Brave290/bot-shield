@@ -44,8 +44,12 @@ export default function Dashboard() {
     try {
       const { data: sess } = await supabase.auth.getSession();
       const r = await fetch("/api/admin/data?type=me", { headers: { Authorization: "Bearer " + (sess?.session?.access_token || "") } });
-      if (r.ok) { const me = await r.json(); if (me.role === "owner") t = "Enterprise"; else if (me.role === "admin" && t === "Hobby") t = "Pro"; } }
-    } catch {}
+      if (r.ok) {
+        const me = await r.json();
+        if (me.role === "owner") t = "Enterprise";
+        else if (me.role === "admin" && t === "Hobby") t = "Pro";
+      }
+    } catch (_) {}
     setTier(t);
   };
 
