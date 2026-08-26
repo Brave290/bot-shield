@@ -39,12 +39,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "passed", token, score: 0, botType: "whitelisted", mode });
     }
 
+    // RATE LIMIT: Check BEFORE inserting (don't waste DB writes on spam)
     const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
-    const { count } = await supabaseAdmin.from("rate_limit_events").select("*", { count: "exact", head: true }).eq("limit_id", "api_key").eq("scope_key", apiKey).gte("created_at", cutoff);
-    await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey });
+    const { count, error: countErr } = await supabaseAdmin.from("rate_limit_events").select("*", { count: "exact", head: true }).eq("limit_id", "api_key").eq("scope_key", apiKey).gte("created_at", cutoff);
+    if (countErr) console.error("[BotShield] Rate limit count error:", countErr);
+    
     if ((count || 0) >= 100) {
       return NextResponse.json({ status: "blocked", reason: "Rate limit exceeded (100/min)" }, { status: 429 });
     }
+
+    // Only insert if we're under the limit
+    const { error: insertErr } = await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey });
+    if (insertErr) console.error("[BotShield] Rate limit insert error:", insertErr);
 
     let score = 50;
     try { score = calculateBotScore(payload); } catch { score = 50; }
