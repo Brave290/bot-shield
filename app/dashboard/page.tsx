@@ -54,12 +54,13 @@ export default function Dashboard() {
     setTier(t);
   };
 
-    useEffect(() => {
+    useEffect(() => { const t = setTimeout(() => setLoading(false), 4000); return () => clearTimeout(t); }, []);
+  useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getSession();
       const r = await fetch("/api/usage", { headers: { Authorization: "Bearer " + (data.session?.access_token || "") } });
       if (r.ok) setUsage(await r.json());
-    })();
+    })().catch(() => {});
   }, []);
 
   useEffect(() => {

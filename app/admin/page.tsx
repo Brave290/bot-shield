@@ -6,6 +6,7 @@ import { Icons } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
 import { ask } from "@/components/confirm";
+import { AdminQuickLinks } from "@/components/admin-quick-links";
 import { BrandLoader } from "@/components/loader";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
@@ -69,21 +70,7 @@ export default function Admin() {
   if (state === "denied") return (<>
     <Navigation />
     <main className="min-h-screen flex items-center justify-center px-6">
-      {me && (<> <div className="mb-10 mt-6">
-        <p className="text-xs uppercase tracking-widest text-slate-600 mb-3">Quick links</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <a href="/admin/rate-limits" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Rate limits</a>
-          <a href="/admin/settings" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Platform settings</a>
-          <a href="/dashboard/analytics" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Analytics</a>
-          <a href="/test" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Playground</a>
-          <a href="/docs" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Docs</a>
-          <button onClick={() => setTab("rules")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Project rules</button>
-          <button onClick={() => setTab("admins")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Admins</button>
-          <button onClick={() => setTab("audit")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Audit log</button>
-          <button onClick={() => setTab("ping")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Ping / cron</button>
-          <button onClick={() => setTab("messages")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center transition-colors">Messages</button>
-        </div>
-      </div> </>)}
+      
       <div className="mb-10">
         <p className="text-xs uppercase tracking-widest text-slate-600 mb-3">Quick links</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -145,6 +132,8 @@ export default function Admin() {
         </aside>
 
         <section className="min-w-0 max-w-full">
+          {me && <AdminQuickLinks onJump={setTab} />}
+
           {tab === "overview" && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[["Visitors", stats.visitors], ["Users", stats.users], ["Projects", stats.projects], ["Payments", stats.payments], ["Messages", stats.messages], ["Applications", stats.applications], ["Admins", stats.admins]].map(([l, v]) => (
