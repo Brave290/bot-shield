@@ -230,7 +230,7 @@ export default function Dashboard() {
                     <button onClick={() => copy(p.api_key, p.id + "a")} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500 shrink-0">{copied === p.id + "a" ? "Copied" : "Copy"}</button>
                   </div>
                   <div className="flex items-center gap-3">
-                    <code className="flex-1 min-w-0 text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 font-mono break-all">{revealed[p.id] ? p.secret_key : "bs_sec_••••••••••••••••"}</code>
+                    <code className="flex-1 min-w-0 text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 font-mono break-all">{revealed[p.id] ? (p.secret_key.startsWith("hash:") ? "🔒 Secured (Rotate to generate a new key)" : p.secret_key) : "bs_sec_••••••••••••••••"}</code>
                     <button onClick={() => setRevealed({ ...revealed, [p.id]: !revealed[p.id] })} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500 shrink-0">{revealed[p.id] ? "Hide" : "Reveal"}</button>
                     <button onClick={() => copy(p.secret_key, p.id + "s")} className="px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 hover:border-slate-500 shrink-0">{copied === p.id + "s" ? "Copied" : "Copy"}</button>
                   </div>
