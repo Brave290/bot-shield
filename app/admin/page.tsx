@@ -69,6 +69,22 @@ export default function Admin() {
   if (state === "denied") return (<>
     <Navigation />
     <main className="min-h-screen flex items-center justify-center px-6">
+      <div className="mb-10">
+        <p className="text-xs uppercase tracking-widest text-slate-600 mb-3">Quick links</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <a href="/admin/rate-limits" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Rate limits</a>
+          <a href="/admin/settings" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Platform settings</a>
+          <a href="/dashboard/analytics" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Analytics</a>
+          <a href="/test" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Playground</a>
+          <a href="/docs" className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Docs</a>
+          <button onClick={() => setTab("rules")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Project rules</button>
+          <button onClick={() => setTab("admins")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Admins</button>
+          <button onClick={() => setTab("audit")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Audit log</button>
+          <button onClick={() => setTab("ping")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Ping / cron</button>
+          <button onClick={() => setTab("messages")} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">Messages</button>
+        </div>
+      </div>
+
       <div className="text-center max-w-md">
         <div className="mx-auto w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mb-6"><Icons.Lock className="w-7 h-7" /></div>
         <h1 className="font-serif text-4xl font-bold text-white mb-4">Restricted area.</h1>
@@ -100,8 +116,7 @@ export default function Admin() {
           <p className="text-sm text-slate-500 mt-1">{me?.email} · <span className={me?.role === "owner" ? "text-amber-400" : "text-blue-400"}>{me?.role}</span></p>
         </div>
         <div className="flex gap-2">
-          <a href="/admin/rate-limits" className="px-5 py-2.5 rounded-lg border border-slate-700 hover:border-slate-500 text-sm text-slate-300">Rate limits</a>
-          <a href="/admin/settings" className="px-5 py-2.5 rounded-lg border border-slate-700 hover:border-slate-500 text-sm text-slate-300">Settings</a>
+          
         </div>
       </div>
 
