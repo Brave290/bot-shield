@@ -39,16 +39,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "passed", token, score: 0, botType: "whitelisted", mode });
     }
 
-    // RATE LIMIT: Check BEFORE inserting (don't waste DB writes on spam)
-    const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
+    // RATE LIMIT: Read config from database (default 100 req / 60s if not configured)
+    const { data: rateConfig } = await supabaseAdmin.from("rate_limits").select("*").eq("endpoint", "/api/challenge").single();
+    const maxAttempts = rateConfig?.max_attempts || 100;
+    const windowSeconds = rateConfig?.window_seconds || 60;
+
+    const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
     const { count, error: countErr } = await supabaseAdmin.from("rate_limit_events").select("*", { count: "exact", head: true }).eq("limit_id", "api_key").eq("scope_key", apiKey).gte("created_at", cutoff);
     if (countErr) console.error("[BotShield] Rate limit count error:", countErr);
     
-    if ((count || 0) >= 100) {
-      return NextResponse.json({ status: "blocked", reason: "Rate limit exceeded (100/min)" }, { status: 429 });
+    if ((count || 0) >= maxAttempts) {
+      return NextResponse.json({ status: "blocked", reason: `Rate limit exceeded (${maxAttempts}/${windowSeconds}s)` }, { status: 429 });
     }
 
-    // Only insert if we're under the limit
     const { error: insertErr } = await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey });
     if (insertErr) console.error("[BotShield] Rate limit insert error:", insertErr);
 
