@@ -53,8 +53,6 @@ export async function POST(req: Request) {
     }
 
     if (!rateConfig || rateConfig.enabled !== false) { await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey }); }
-    if (insertErr) console.error("[BotShield] Rate limit insert error:", insertErr);
-
     let score = 50;
     try { score = calculateBotScore(payload); } catch { score = 50; }
     const botType = classifyBot(payload, score);
