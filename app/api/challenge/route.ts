@@ -48,11 +48,11 @@ export async function POST(req: Request) {
     const { count, error: countErr } = await supabaseAdmin.from("rate_limit_events").select("*", { count: "exact", head: true }).eq("limit_id", "api_key").eq("scope_key", apiKey).gte("created_at", cutoff);
     if (countErr) console.error("[BotShield] Rate limit count error:", countErr);
     
-    if ((count || 0) >= maxAttempts) {
+    if ((!rateConfig || rateConfig.enabled !== false) && (count || 0) >= maxAttempts) {
       return NextResponse.json({ status: "blocked", reason: `Rate limit exceeded (${maxAttempts}/${windowSeconds}s)` }, { status: 429 });
     }
 
-    const { error: insertErr } = await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey });
+    if (!rateConfig || rateConfig.enabled !== false) { await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey }); }
     if (insertErr) console.error("[BotShield] Rate limit insert error:", insertErr);
 
     let score = 50;

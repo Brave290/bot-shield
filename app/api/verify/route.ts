@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { jwtVerify } from "jose";
 import { hashSecret } from "@/lib/crypto";
@@ -6,6 +7,18 @@ import { hashSecret } from "@/lib/crypto";
 export async function POST(req: Request) {
   try {
     const { secretKey, token } = await req.json();
+
+    const h = await headers();
+    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { data: rateConfig } = await supabaseAdmin.from("rate_limits").select("*").eq("endpoint", "/api/verify").single();
+    const maxAttempts = rateConfig?.max_attempts || 100;
+    const windowSeconds = rateConfig?.window_seconds || 60;
+    if (!rateConfig || rateConfig.enabled !== false) {
+      const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
+      const { count } = await supabaseAdmin.from("rate_limit_events").select("*", { count: "exact", head: true }).eq("limit_id", "verify_ip").eq("scope_key", ip).gte("created_at", cutoff);
+      if ((count || 0) >= maxAttempts) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+      await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "verify_ip", scope_key: ip });
+    }
     if (!secretKey || !token) {
       return NextResponse.json({ error: "secretKey and token required" }, { status: 400 });
     }
