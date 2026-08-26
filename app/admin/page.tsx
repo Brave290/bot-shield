@@ -9,7 +9,7 @@ import { ask } from "@/components/confirm";
 import { BrandLoader } from "@/components/loader";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "ping";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -20,6 +20,7 @@ export default function Admin() {
   const [pricing, setPricing] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [audit, setAudit] = useState<any[]>([]);
+  const [pings, setPings] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({});
   const [newAdmin, setNewAdmin] = useState("");
@@ -35,8 +36,8 @@ export default function Admin() {
     const get = (t: string) => fetch(`/api/admin/data?type=${t}`, { headers: h });
     const m = await get("messages");
     if (m.status === 403) { setState("denied"); return; }
-    const [a, p, ad, st, au, pr, meRes] = await Promise.all([get("applications"), get("pricing"), get("admins"), get("stats"), get("audit"), get("projects"), get("me")]);
-    setMessages(await m.json()); setApps(await a.json()); setPricing(await p.json()); setAdmins(await ad.json()); setStats(await st.json()); setAudit(await au.json()); setProjects(await pr.json()); setMe(await meRes.json());
+    const [a, p, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/ping", { headers: h })]);
+    setMessages(await m.json()); setApps(await a.json()); setPricing(await p.json()); setAdmins(await ad.json()); setStats(await st.json()); setAudit(await au.json()); setProjects(await pr.json()); setMe(await meRes.json()); setPings(await pn.json());
     setState("ready");
   }, [headers]);
 
@@ -85,6 +86,7 @@ export default function Admin() {
     { id: "rules", label: "Project rules" },
     { id: "admins", label: "Admins" },
     { id: "audit", label: "Audit log" },
+    { id: "ping", label: "Ping" },
   ];
 
   return (<>
@@ -222,6 +224,38 @@ export default function Admin() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+                    {tab === "ping" && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-serif text-2xl font-bold text-white">Ping history</h2>
+                  <p className="text-xs text-slate-500 font-light mt-1">Last 20 manual and scheduled cron runs</p>
+                </div>
+                <button onClick={async () => {
+                  toast("info", "Running cron job...");
+                  const res = await fetch("/api/admin/ping", { method: "POST", headers: await headers() });
+                  const d = await res.json();
+                  if (!res.ok) { toast("error", d.error || "Ping failed"); return; }
+                  toast("success", "Cron job completed in " + d.duration_ms + "ms");
+                  await loadAll();
+                }} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Run cron now</button>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden">
+                <div className="divide-y divide-slate-800/60">
+                  {pings.map((p) => (
+                    <div key={p.id} className="px-5 py-4 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                      <span className="text-slate-600 font-mono">{new Date(p.created_at).toLocaleString()}</span>
+                      <span className="text-white font-medium">{p.triggered_by}</span>
+                      <span className={p.status === "success" ? "text-emerald-400" : "text-red-400"}>{p.status}</span>
+                      <span className="text-slate-500">{p.duration_ms}ms</span>
+                      {p.result && <pre className="text-[10px] text-slate-600 font-mono break-all">{JSON.stringify(p.result).slice(0, 100)}</pre>}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
