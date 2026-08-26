@@ -15,7 +15,9 @@ function Hamburger({ open }: { open: boolean }) {
   );
 }
 
-export function Navigation({ menu }: { menu?: { label: string; href: string }[] }) {
+export function Navigation({
+menu }: { menu?: { label: string; href: string }[] }) {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -35,7 +37,14 @@ export function Navigation({ menu }: { menu?: { label: string; href: string }[] 
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const links = [
+  const isAdmin = (pathname || "").startsWith("/admin");
+  const links = isAdmin ? [
+    { label: "Admin console", href: "/admin" },
+    { label: "Rate limits", href: "/admin/rate-limits" },
+    { label: "Platform settings", href: "/admin/settings" },
+    { label: "Analytics", href: "/dashboard/analytics" },
+    { label: "Docs", href: "/docs" },
+  ] : [
     { label: "Features", href: "/features" },
     { label: "Pricing", href: "/pricing" },
     { label: "Documentation", href: "/docs" },

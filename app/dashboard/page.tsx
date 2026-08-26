@@ -73,11 +73,13 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getSession();
+      if (!data.session) { window.location.href = "/login"; return; }
       setUser(data.session?.user ?? null);
       if (data.session?.user) await load(data.session.user.id);
       setLoading(false);
     })();
     const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
+      if (!s?.user) { window.location.href = "/login"; return; }
       setUser(s?.user ?? null);
       if (s?.user) await load(s.user.id);
     });
