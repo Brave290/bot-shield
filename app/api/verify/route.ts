@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     // Validate JWT
-    const secret = new TextEncoder().encode(secretKey);
+    const secret = new TextEncoder().encode(project.secret_key);
     const { payload } = await jwtVerify(token, secret, {
       issuer: "botshield",
       audience: project.id,
