@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/toast";
 import { ScrollReset } from "@/components/scroll-reset";
@@ -17,11 +18,18 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // FORCE DYNAMIC: This prevents Next.js from caching the layout
+  const headersList = await headers();
+  
   let maintenance = false;
   try {
-    const { data } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "maintenance_mode").single();
+    const { data, error } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "maintenance_mode").single();
     maintenance = data?.value === "on";
-  } catch {}
+    console.log("🔧 MAINTENANCE CHECK:", { maintenance, dbValue: data?.value, error: error?.message });
+  } catch (e) {
+    console.error("❌ MAINTENANCE CHECK FAILED:", e);
+  }
+
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <head>
