@@ -68,7 +68,7 @@ export async function POST(req: Request) {
   const log = (action: string, target: string) => supabaseAdmin.from("audit_logs").insert({ actor_email: admin.email, action, target });
 
   if (body.action === "save-setting") {
-    if (!["resend_api_key", "maintenance_mode"].includes(body.key) || !body.value) return NextResponse.json({ error: "Invalid setting" }, { status: 400 });
+    if (!["resend_api_key", "maintenance_mode", "resend_from_email", "contact_notify_email"].includes(body.key) || !body.value) return NextResponse.json({ error: "Invalid setting" }, { status: 400 });
     await supabaseAdmin.from("platform_settings").upsert({ key: body.key, value: body.value }, { onConflict: "key" });
     await log("update_setting", body.key);
     return NextResponse.json({ ok: true });

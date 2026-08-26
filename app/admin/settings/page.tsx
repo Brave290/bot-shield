@@ -39,6 +39,15 @@ export default function AdminSettings() {
     toast(next ? "error" : "success", next ? "Maintenance mode ON — public site is down for visitors" : "Maintenance mode OFF — site is live");
   };
 
+  const saveEmailRouting = async () => {
+    const notify = (document.getElementById("notify-email") as HTMLInputElement).value.trim();
+    const from = (document.getElementById("from-email") as HTMLInputElement).value.trim();
+    for (const [key, value] of [["contact_notify_email", notify], ["resend_from_email", from]] as const) {
+      if (value) await fetch("/api/admin/data", { method: "POST", headers: await headers(), body: JSON.stringify({ action: "save-setting", key, value }) });
+    }
+    toast("success", "Email routing saved");
+  };
+
   const testEmail = async () => {
     const res = await fetch("/api/admin/data", { method: "POST", headers: await headers(), body: JSON.stringify({ action: "test-email" }) });
     const d = await res.json();
@@ -78,6 +87,15 @@ export default function AdminSettings() {
         <input type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="re_..." className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-blue-500/60" />
         <button onClick={saveKey} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Save key</button>
         <button onClick={testEmail} className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 text-sm font-medium">Send test email</button>
+      </div>
+      <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
+        <h2 className="text-white font-semibold">Email routing (optional)</h2>
+        <p className="text-xs text-slate-500 font-light">Where contact messages go, and the "from" address once you verify a domain at resend.com.</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div><label className="block text-xs text-slate-500 mb-2">Notify email</label><input id="notify-email" placeholder="legateakanjimusab@gmail.com" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" /></div>
+          <div><label className="block text-xs text-slate-500 mb-2">From address</label><input id="from-email" placeholder="BotShield <notify@yourdomain.com>" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" /></div>
+        </div>
+        <button onClick={saveEmailRouting} className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium">Save routing</button>
       </div>
     </main>
   </>);

@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     const h = await headers();
     const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipHash = createHash("sha256").update(ip).digest("hex");
+    const country = (h.get("x-vercel-ip-country") || "unknown").toLowerCase();
     const allowedIps: string[] = project.allowed_ips || [];
     const blockedIps: string[] = project.blocked_ips || [];
     const mode = project.mode || "active";
@@ -29,12 +30,12 @@ export async function POST(req: Request) {
     };
 
     if (blockedIps.includes(ip)) {
-      await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score: 100, bot_type: "blacklisted", status: "blocked", mode, ip_hash: ipHash });
+      await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score: 100, bot_type: "blacklisted", status: "blocked", mode, ip_hash: ipHash, country });
       return NextResponse.json({ status: "blocked", reason: "IP blacklisted" }, { status: 403 });
     }
 
     if (allowedIps.includes(ip)) {
-      await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score: 0, bot_type: "whitelisted", status: "passed", mode, ip_hash: ipHash });
+      await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score: 0, bot_type: "whitelisted", status: "passed", mode, ip_hash: ipHash, country });
       const token = await signToken(0);
       return NextResponse.json({ status: "passed", token, score: 0, botType: "whitelisted", mode });
     }
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     const wouldBlock = score >= thresholdFor(project.sensitivity);
     const actuallyBlocked = mode === "active" && wouldBlock;
 
-    const { error: logErr } = await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: wouldBlock ? "blocked" : "passed", mode, ip_hash: ipHash });
+    const { error: logErr } = await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: wouldBlock ? "blocked" : "passed", mode, ip_hash: ipHash, country });
     if (logErr) console.error("[BotShield] Log insert failed:", logErr);
 
     if (actuallyBlocked) return NextResponse.json({ status: "blocked", score, botType }, { status: 403 });
