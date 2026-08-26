@@ -79,7 +79,12 @@ function LiveStats() {
     return () => { supabase.removeChannel(ch); clearInterval(iv); };
   }, []);
   const fmt = (n: number) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n));
-  const items = [["Requests analyzed", fmt(s.t)], ["Bots blocked", fmt(s.b)], ["Median response", "48ms"], ["Projects protected", "99.98%"]];
+  const items = [
+    ["Requests analyzed", s.t?.toLocaleString() || "0"],
+    ["Bots blocked", s.b?.toLocaleString() || "0"],
+    ["Median response", latency !== null ? latency + "ms" : "…"],
+    ["Projects protected", projectsProtected.toString()]
+  ];
   return (
     <section className="py-24">
       <div className="max-w-7xl mx-auto px-6">
