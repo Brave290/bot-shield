@@ -29,7 +29,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "passed", token, score: 0, botType: "whitelisted", mode: "active" });
     }
 
-    // TODO: Add rate limit check here before scoring (Critical #3)
+    // CRITICAL: Rate limiting check
+    const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count: recentAttempts } = await supabaseAdmin.from("rate_limit_events")
+      .select("*", { count: "exact", head: true })
+      .eq("limit_id", "api_key")
+      .eq("scope_key", apiKey)
+      .gte("created_at", cutoff);
+    
+    if ((recentAttempts || 0) > 100) {
+      await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey });
+      return NextResponse.json({ status: "blocked", reason: "Rate limit exceeded (100/min)" }, { status: 429 });
+    }
+    await supabaseAdmin.from("rate_limit_events").insert({ limit_id: "api_key", scope_key: apiKey }); (Critical #3)
     // For now, we proceed to scoring
     
     let score = 50;
