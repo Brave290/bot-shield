@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "@/components/icons";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
@@ -111,7 +112,22 @@ export default function Admin() {
 
   return (<>
     <Navigation />
-    <main className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="lg:flex min-h-screen pt-24">
+<aside className="hidden lg:block fixed top-24 bottom-0 left-0 w-72 border-r border-slate-800 bg-slate-900/30 overflow-y-auto"><nav className="p-6 space-y-1">
+<button onClick={() => setTab("overview")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "overview" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="chart" className="w-4 h-4 shrink-0" />Overview</button>
+<button onClick={() => setTab("rules")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "rules" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="shield" className="w-4 h-4 shrink-0" />Project Rules</button>
+<a href="/admin/rate-limits" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="zap" className="w-4 h-4 shrink-0" />Rate Limits</a>
+<a href="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="settings" className="w-4 h-4 shrink-0" />Settings</a>
+<a href="/dashboard/analytics" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="trending" className="w-4 h-4 shrink-0" />Analytics</a>
+<button onClick={() => setTab("admins")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "admins" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="users" className="w-4 h-4 shrink-0" />Admins</button>
+<button onClick={() => setTab("audit")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "audit" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="file" className="w-4 h-4 shrink-0" />Audit Log</button>
+<button onClick={() => setTab("ping")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "ping" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="activity" className="w-4 h-4 shrink-0" />Ping / Cron</button>
+<button onClick={() => setTab("messages")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "messages" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="mail" className="w-4 h-4 shrink-0" />Messages</button>
+<a href="/test" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="flask" className="w-4 h-4 shrink-0" />Playground</a>
+<a href="/docs" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="book" className="w-4 h-4 shrink-0" />Docs</a>
+</nav></aside>
+<div className="flex-1 lg:ml-72">
+<main className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="font-serif text-4xl font-bold text-white">Admin Console</h1>
@@ -305,5 +321,7 @@ export default function Admin() {
         </section>
       </div>
     </main>
+</div>
+</div>
   </>);
 }
