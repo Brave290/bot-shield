@@ -1,28 +1,29 @@
 "use client";
 export function AdminQuickLinks({ onJump }: { onJump: (t: any) => void }) {
   const links = [
-    ["Rate limits", "/admin/rate-limits"],
-    ["Platform settings", "/admin/settings"],
-    ["Analytics", "/dashboard/analytics"],
-    ["Playground", "/test"],
-    ["Docs", "/docs"],
+    ["Rate limits", "/admin/rate-limits", "⚡"],
+    ["Settings", "/admin/settings", "⚙️"],
+    ["Analytics", "/dashboard/analytics", "📊"],
+    ["Playground", "/test", "🧪"],
+    ["Docs", "/docs", "📚"],
   ];
   const tabs = [
-    ["Project rules", "rules"],
-    ["Admins", "admins"],
-    ["Audit log", "audit"],
-    ["Ping / cron", "ping"],
-    ["Messages", "messages"],
+    ["Rules", "rules", "🛡️"],
+    ["Admins", "admins", "👥"],
+    ["Audit", "audit", "🧾"],
+    ["Ping", "ping", "📡"],
+    ["Messages", "messages", "✉️"],
   ];
+  const pill = "shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-slate-800 bg-slate-900/60 hover:border-blue-500/60 hover:bg-blue-500/10 text-xs text-slate-300 hover:text-white transition-colors";
   return (
-    <div className="mb-10">
-      <p className="text-xs uppercase tracking-widest text-slate-600 mb-3">Quick links</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {links.map(([label, href]) => (
-          <a key={href} href={href} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">{label}</a>
+    <div className="mb-8">
+      <div className="flex gap-2 overflow-x-auto pb-2 lg:flex-wrap lg:overflow-visible">
+        {links.map(([label, href, icon]) => (
+          <a key={href} href={href} className={pill}><span className="text-sm">{icon}</span>{label}</a>
         ))}
-        {tabs.map(([label, t]) => (
-          <button key={t} onClick={() => onJump(t)} className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-blue-500/50 text-sm text-slate-300 hover:text-white text-center">{label}</button>
+        <span className="w-px self-stretch bg-slate-800 mx-1 shrink-0" />
+        {tabs.map(([label, t, icon]) => (
+          <button key={t} onClick={() => onJump(t)} className={pill}><span className="text-sm">{icon}</span>{label}</button>
         ))}
       </div>
     </div>
