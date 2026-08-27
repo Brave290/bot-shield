@@ -7,6 +7,7 @@ import { Icons } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
 import { ask } from "@/components/confirm";
+import { V6Card, V6Skeleton, V6TabContent } from "@/components/v6-ui";
 import { AdminQuickLinks } from "@/components/admin-quick-links";
 import { BrandLoader } from "@/components/loader";
 
@@ -97,7 +98,7 @@ export default function Admin() {
     <Navigation />
     <div className="lg:flex min-h-screen pt-24">
 <aside className="hidden lg:block fixed top-24 bottom-0 left-0 w-72 border-r border-slate-800 bg-slate-900/30 overflow-y-auto"><nav className="p-6 space-y-1">
-<button onClick={() => setTab("overview")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "overview" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="chart" className="w-4 h-4 shrink-0" />Overview</button>
+<button onClick={() => setTab("overview")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "overview" ? "bg-blue-600/15 text-blue-400 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="chart" className="w-4 h-4 shrink-0" />Overview</button>
 <button onClick={() => setTab("rules")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "rules" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="shield" className="w-4 h-4 shrink-0" />Project Rules</button>
 <a href="/admin/rate-limits" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="zap" className="w-4 h-4 shrink-0" />Rate Limits</a>
 <a href="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="settings" className="w-4 h-4 shrink-0" />Settings</a>

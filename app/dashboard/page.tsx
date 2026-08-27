@@ -6,7 +6,7 @@ import { Icons, MotionLink } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
 import { ask } from "@/components/confirm";
-import { BrandLoader } from "@/components/loader";
+import { V6Card, V6Skeleton, V6Stagger, V6StaggerItem } from "@/components/v6-ui";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const gen = (p: string) => p + Array.from(crypto.getRandomValues(new Uint8Array(24))).map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
@@ -171,7 +171,16 @@ export default function Dashboard() {
     window.location.href = "/";
   }
 
-  if (loading) return (<><Navigation /><BrandLoader /></>);
+  if (loading) if (loading) return (<>
+  <Navigation />
+  <main className="pt-28 pb-24 max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
+    <V6Skeleton className="h-10 w-48 mb-8" />
+    <div className="grid md:grid-cols-3 gap-6">
+      <V6Skeleton className="h-32" /><V6Skeleton className="h-32" /><V6Skeleton className="h-32" />
+    </div>
+    <V6Skeleton className="h-64" />
+  </main>
+</>);
 
   return (<>
     <Navigation menu={dashMenu} />
