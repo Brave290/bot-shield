@@ -1,4 +1,5 @@
 "use client";
+import { AdminCMS } from "@/components/admin-cms";
 import { Icon } from "@/components/icons";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -12,7 +13,7 @@ import { AdminQuickLinks } from "@/components/admin-quick-links";
 import { BrandLoader } from "@/components/loader";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "ping";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "ping" | "cms";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -27,6 +28,7 @@ export default function Admin() {
   const [projects, setProjects] = useState<any[]>([]);
   const [myIp, setMyIp] = useState("");
   const [stats, setStats] = useState<any>({});
+  const [cmsPages, setCmsPages] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState("");
   const [transferTo, setTransferTo] = useState("");
 
@@ -44,6 +46,13 @@ export default function Admin() {
     setMessages(await m.json()); setApps(await a.json()); setPricing(await p.json()); setAdmins(await ad.json()); setStats(await st.json()); setAudit(await au.json()); setProjects(await pr.json()); setMe(await meRes.json()); setPings(await pn.json());
     setState("ready");
   }, [headers]);
+
+  
+  useEffect(() => {
+    if (tab === "cms") {
+      fetch("/api/cms", { headers: headers() }).then(r => r.json()).then(d => setCmsPages(d)).catch(() => {});
+    }
+  }, [tab]);
 
   useEffect(() => { loadAll(); fetch("/api/my-ip").then((r) => r.json()).then((d) => setMyIp(d.ip || "")).catch(() => {}); }, [loadAll]);
 
@@ -304,7 +313,9 @@ export default function Admin() {
           )}
         </section>
       </div>
-    </main>
+    
+  {tab === "cms" && <AdminCMS headers={headers} loadAll={loadAll} initialPages={cmsPages || []} />}
+</main>
 </div>
 </div>
   </>);
