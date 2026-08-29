@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { createClient } from "@supabase/supabase-js";
-import { Shield, Plus, ArrowRight, Activity, Clock } from "lucide-react";
+import { Shield, Plus, ArrowRight, Activity, Clock, Loader2 } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,27 +19,50 @@ export default function UserDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
-      
-      setUser(user);
-      
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      
-      setProjects(data || []);
-      setLoading(false);
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) { 
+          router.push("/login"); 
+          return; 
+        }
+        
+        setUser(user);
+        
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching projects:", error);
+        } else {
+          setProjects(data || []);
+        }
+      } catch (err) {
+        console.error("Error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
+    
     fetchData();
   }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
   };
+
+  if (loading) {
+    return (
+      <DashboardShell userType="user" userName="Loading...">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell userType="user" userName={user?.email} onLogout={handleLogout}>
@@ -47,8 +70,8 @@ export default function UserDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Your Projects</h1>
-            <p className="text-slate-400 mt-1">Manage and configure your BotShield projects</p>
+            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+            <p className="text-slate-400 mt-1">Manage your BotShield projects</p>
           </div>
           <button 
             onClick={() => router.push("/dashboard/new-project")}
@@ -60,20 +83,14 @@ export default function UserDashboard() {
         </div>
 
         {/* Projects Grid */}
-        {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 rounded-2xl bg-slate-900/50 animate-pulse border border-slate-800" />
-            ))}
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl">
+        {projects.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30">
             <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-slate-600" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No projects yet</h3>
             <p className="text-slate-400 mb-6 max-w-sm mx-auto">
-              Create your first project to start protecting your website from bots
+              Create your first project to start protecting your website from bots and automated threats
             </p>
             <button 
               onClick={() => router.push("/dashboard/new-project")}
