@@ -9,16 +9,42 @@ export function AdminCMS({ headers, loadAll, initialPages }: any) {
 
   const save = async () => {
     if (!selected.title || !selected.slug) { toast("error", "Title and Slug are required"); return; }
-    const res = await fetch("/api/cms", { method: "POST", headers, body: JSON.stringify(selected) });
-    if (res.ok) { toast("success", "Saved successfully"); if (loadAll) await loadAll(); } 
-    else { const d = await res.json(); toast("error", d.error || "Failed"); }
+    
+    // Await the headers function if it's a function, otherwise use it as an object
+    const authHeaders = typeof headers === 'function' ? await headers() : headers;
+    
+    const res = await fetch("/api/cms", { 
+      method: "POST", 
+      headers: authHeaders, 
+      body: JSON.stringify(selected) 
+    });
+    
+    if (res.ok) { 
+      toast("success", "Saved successfully"); 
+      if (loadAll) await loadAll(); 
+    } else { 
+      const d = await res.json(); 
+      toast("error", d.error || "Failed"); 
+    }
   };
 
   const deletePage = async () => {
     if (!selected?.id) return;
-    const res = await fetch(`/api/cms?id=${selected.id}`, { method: "DELETE", headers });
-    if (res.ok) { toast("success", "Deleted"); setSelected(null); if (loadAll) await loadAll(); }
-    else toast("error", "Failed to delete");
+    
+    const authHeaders = typeof headers === 'function' ? await headers() : headers;
+    
+    const res = await fetch(`/api/cms?id=${selected.id}`, { 
+      method: "DELETE", 
+      headers: authHeaders 
+    });
+    
+    if (res.ok) { 
+      toast("success", "Deleted"); 
+      setSelected(null); 
+      if (loadAll) await loadAll(); 
+    } else {
+      toast("error", "Failed to delete");
+    }
   };
 
   const filtered = pages.filter((p: any) => p.type === type);
