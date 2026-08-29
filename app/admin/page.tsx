@@ -50,7 +50,7 @@ export default function Admin() {
   
   useEffect(() => {
     if (tab === "cms") {
-      fetch("/api/cms", { headers: headers() }).then(r => r.json()).then(d => setCmsPages(d)).catch(() => {});
+      fetch("/api/cms", { headers }).then(r => r.json()).then(d => setCmsPages(d)).catch(() => {});
     }
   }, [tab]);
 

@@ -9,15 +9,15 @@ export function AdminCMS({ headers, loadAll, initialPages }: any) {
 
   const save = async () => {
     if (!selected.title || !selected.slug) { toast("error", "Title and Slug are required"); return; }
-    const res = await fetch("/api/cms", { method: "POST", headers: await headers(), body: JSON.stringify(selected) });
-    if (res.ok) { toast("success", "Saved successfully"); await loadAll(); } 
+    const res = await fetch("/api/cms", { method: "POST", headers, body: JSON.stringify(selected) });
+    if (res.ok) { toast("success", "Saved successfully"); if (loadAll) await loadAll(); } 
     else { const d = await res.json(); toast("error", d.error || "Failed"); }
   };
 
   const deletePage = async () => {
     if (!selected?.id) return;
-    const res = await fetch(`/api/cms?id=${selected.id}`, { method: "DELETE", headers: await headers() });
-    if (res.ok) { toast("success", "Deleted"); setSelected(null); await loadAll(); }
+    const res = await fetch(`/api/cms?id=${selected.id}`, { method: "DELETE", headers });
+    if (res.ok) { toast("success", "Deleted"); setSelected(null); if (loadAll) await loadAll(); }
     else toast("error", "Failed to delete");
   };
 
@@ -37,7 +37,6 @@ export function AdminCMS({ headers, loadAll, initialPages }: any) {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* List */}
         <div className="lg:col-span-1 space-y-2 max-h-[600px] overflow-y-auto pr-2">
           <button onClick={() => setSelected({ slug: "", title: "", content: "", type, is_published: false })} className="w-full p-3 rounded-lg border border-dashed border-slate-700 text-slate-400 hover:text-white hover:border-blue-500 text-sm text-center">
             + Create New {type}
@@ -50,7 +49,6 @@ export function AdminCMS({ headers, loadAll, initialPages }: any) {
           ))}
         </div>
 
-        {/* Editor */}
         <div className="lg:col-span-2">
           {selected ? (
             <div className="space-y-4 p-6 rounded-xl border border-slate-800 bg-slate-900">

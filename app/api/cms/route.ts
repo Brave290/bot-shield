@@ -6,9 +6,11 @@ export async function GET(req: Request) {
   const type = searchParams.get("type");
   const slug = searchParams.get("slug");
 
-  let query = supabaseAdmin.from("cms_pages").select("*").order("updated_at", { ascending: false });
+  // Build query safely to avoid TypeScript inference issues
+  let query: any = supabaseAdmin.from("cms_pages").select("*");
   if (type) query = query.eq("type", type);
   if (slug) query = query.eq("slug", slug).single();
+  query = query.order("updated_at", { ascending: false });
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -16,7 +18,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const token = (req.headers.get("authorization") || "").replace("Bearer ", "");
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const token = authHeader.replace("Bearer ", "");
   const { data: auth } = await supabaseAdmin.auth.getUser(token);
   if (!auth?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -28,11 +33,9 @@ export async function POST(req: Request) {
   }
 
   if (id) {
-    // Update existing
     const { error } = await supabaseAdmin.from("cms_pages").update({ slug, title, content, type, is_published }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
-    // Create new
     const { error } = await supabaseAdmin.from("cms_pages").insert({ slug, title, content, type, is_published });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -41,7 +44,10 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const token = (req.headers.get("authorization") || "").replace("Bearer ", "");
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const token = authHeader.replace("Bearer ", "");
   const { data: auth } = await supabaseAdmin.auth.getUser(token);
   if (!auth?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
