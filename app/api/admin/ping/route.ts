@@ -16,7 +16,10 @@ export async function POST(req: Request) {
   const start = Date.now();
   try {
     const res = await fetch(`${req.headers.get("origin") || "http://localhost:3000"}/api/cron/daily`, {
-      headers: { authorization: `Bearer ${process.env.CRON_SECRET || ""}` }
+      headers: {
+        authorization: `Bearer ${process.env.CRON_SECRET || ""}`,
+        "x-botshield-trigger": `admin:${admin.email}`,
+      }
     });
     const duration = Date.now() - start;
     const result = await res.json();
