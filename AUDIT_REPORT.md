@@ -55,7 +55,7 @@ if (!project) {
 **Fix Applied:**
 - ✅ Created `lib/supabase/server.ts` with `deriveJWTKey()` and `verifyProjectSecret()` functions
 - ✅ Enforces HMAC-SHA256 key derivation for both hashed and plaintext secrets
-- �� Plaintext support is documented as legacy-only during migration period
+- ✅ Plaintext support is documented as legacy-only during migration period
 - ✅ Updated `/api/verify` to use proper key derivation
 
 ---
@@ -177,25 +177,6 @@ const payload = {
   - Calculates typing duration
 - ✅ Added fingerprinting using multiple browser signals
 
-```javascript
-startTracking: function () {
-  this.mouseTracker = { distance: 0, time: 0, curves: 0, lastX: 0, lastY: 0, startTime: Date.now() };
-  
-  document.addEventListener('mousemove', (e) => {
-    const dx = e.clientX - this.mouseTracker.lastX;
-    const dy = e.clientY - this.mouseTracker.lastY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    this.mouseTracker.distance += distance;
-    this.mouseTracker.time = Date.now() - this.mouseTracker.startTime;
-    if (dx !== 0 && dy !== 0) this.mouseTracker.curves++;
-    this.mouseTracker.lastX = e.clientX;
-    this.mouseTracker.lastY = e.clientY;
-  });
-  
-  // Similar keyboard tracking implementation...
-}
-```
-
 ---
 
 ### 6. Hardcoded API URL (MEDIUM) ✅ FIXED
@@ -207,18 +188,6 @@ The widget hardcoded `https://bo-tshield.vercel.app`, making it incompatible wit
 - ✅ Added dynamic API origin detection from script URL
 - ✅ Extracts the domain where the script is hosted and uses that as API base
 - ✅ Automatically supports custom domains without code changes
-
-```javascript
-function getAPIBase() {
-  const scripts = document.querySelectorAll('script[src*="bot-shield"]');
-  if (scripts.length > 0) {
-    const src = scripts[scripts.length - 1].src;
-    const url = new URL(src);
-    return url.origin; // Uses actual deployment domain
-  }
-  return "https://bo-tshield.vercel.app"; // Fallback
-}
-```
 
 ---
 
@@ -232,78 +201,6 @@ README instructed users to `cp .env.example .env.local`, but the file didn't exi
 - ✅ Includes documentation comments
 - ✅ Contains placeholder values only (no real secrets)
 - ✅ Covers Supabase, admin auth, Resend, Stripe, and smoke testing configs
-
-**File created:** `.env.example`
-
----
-
-### 8. Duplicate Root Layouts (MEDIUM) ✅ FIXED
-
-**Finding:**  
-Both `app/layout.tsx` and `src/app/layout.tsx` existed with conflicting configurations. Next.js would only use one, causing confusion.
-
-**Analysis:**
-- `app/layout.tsx` - Active, contains maintenance gate and real app logic
-- `src/app/layout.tsx` - Stale scaffolding from create-next-app
-
-**Fix Applied:**
-- ✅ Recommended deletion of `src/app/layout.tsx` (duplicate scaffolding)
-- ✅ Confirmed `app/layout.tsx` is the single source of truth
-- ✅ Removed confusion from codebase
-
----
-
-### 9. Error Handling Too Silent (MEDIUM) ✅ FIXED
-
-**Finding:**  
-Multiple endpoints silently defaulted to empty/zero responses on database errors, making it impossible to detect failures.
-
-**Code Before:**
-```typescript
-// app/api/stats/realtime/route.ts line 19
-} catch {
-  return NextResponse.json({
-    totalRequests: 0, blockedBots: 0, projects: 0, // All zeros!
-    subscriptionTiers: {}, mostPopularTier: "Pro", pricing: {}
-  });
-}
-```
-
-**Fix Applied:**
-- ✅ Updated `/api/challenge` to return explicit error status codes:
-  - `400` for invalid payload
-  - `401` for invalid credentials
-  - `403` for blocked IP/bot
-  - `429` for rate limit
-  - `500` for internal errors
-  - `503` for service unavailable (failed rate limit check)
-- ✅ Added structured error logging with context
-- ✅ Clients can now distinguish between "no data" and "service error"
-
----
-
-## Additional Improvements
-
-### Scoring Engine Enhancement
-- ✅ Added comprehensive documentation explaining all heuristics
-- ✅ Improved edge case handling (division by zero, missing data)
-- ✅ Default score of 50 (suspicious) if telemetry is missing
-
-**File updated:** `lib/scoring-engine.ts`
-
-### Bot Classification Improvement
-- ✅ Added detailed comments for each bot type detection rule
-- ✅ Improved timing calculation to handle edge cases
-- ✅ Three sensitivity levels clearly documented: strict, default, loose
-
-**File updated:** `lib/bot-type.ts`
-
-### Supabase Server Configuration
-- ✅ Added `deriveJWTKey()` for consistent key material
-- ✅ Added `verifyProjectSecret()` for migration support
-- ✅ Clear documentation of hashed vs. plaintext secret handling
-
-**File created/updated:** `lib/supabase/server.ts`
 
 ---
 
@@ -327,47 +224,9 @@ Multiple endpoints silently defaulted to empty/zero responses on database errors
    - Token verification works end-to-end
    - Rate limiting triggers at threshold
 
-**Run smoke tests:**
-```bash
-SMOKE_API_KEY=bs_live_... SMOKE_SECRET_KEY=sk_live_... npm run smoke
-```
-
 ---
 
-## Migration Guide for Deployment
-
-### For Existing Deployments
-
-1. **Update environment variables** - No new secrets required
-2. **Deploy the audit-fixes branch** - All changes are backward-compatible
-3. **Monitor logs** - Watch for any unexpected verification failures (shouldn't occur)
-4. **Optional: Migrate plaintext secrets** - Run the `/api/migrate-secrets` endpoint once to hash all remaining plaintext secrets
-5. **After migration:** Plaintext secret support can be deprecated
-
-### For New Deployments
-
-1. **Copy `.env.example` to `.env.local`**
-2. **Fill in your Supabase credentials**
-3. **Run `npm install && npm run dev`**
-4. **No additional setup required** - all security defaults are enforced
-
----
-
-## Security Checklist
-
-- ✅ All user input is validated with Zod schemas
-- ✅ Secrets are hashed before storage (consistent key derivation)
-- ✅ JWT tokens expire in 5 minutes
-- ✅ Rate limiting is enforced with fail-closed behavior
-- ✅ IP whitelist/blacklist is checked before scoring
-- ✅ Service role credentials never exposed to client
-- ✅ Real behavioral telemetry is collected (not mock data)
-- ✅ Error responses don't leak sensitive information
-- ✅ All errors are logged for monitoring and debugging
-
----
-
-## Files Modified in This Audit
+## Files Modified
 
 | File | Changes | Severity |
 |------|---------|----------|
@@ -381,24 +240,12 @@ SMOKE_API_KEY=bs_live_... SMOKE_SECRET_KEY=sk_live_... npm run smoke
 
 ---
 
-## Next Steps
-
-1. **Review and merge** this audit-fixes branch
-2. **Deploy to production** (all changes are production-ready)
-3. **Monitor real-world telemetry** - validate scoring accuracy
-4. **Schedule secret migration** - hash all plaintext secrets within 30 days
-5. **Plan v1.3** - machine learning scoring models, per-project analytics
-
----
-
 ## Conclusion
 
 **Status: ✅ ALL CRITICAL ISSUES RESOLVED**
 
-The BotShield platform is now significantly more secure and production-hardened. All security vulnerabilities have been addressed, input validation is enforced, and the client widget now provides real behavioral analysis. The codebase is ready for deployment to production and self-hosting scenarios.
+The BotShield platform is now significantly more secure and production-hardened. All security vulnerabilities have been addressed, input validation is enforced, and the client widget now provides real behavioral analysis.
 
----
-
-**Generated:** September 9, 2026  
-**Audited by:** Copilot Security Audit  
-**Next Audit Recommended:** December 2026 (quarterly)
+**Audited by:** GitHub Copilot Security Audit  
+**Date:** September 9, 2026  
+**Next Audit:** December 2026 (quarterly)
