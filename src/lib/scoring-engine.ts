@@ -1,7 +1,7 @@
 export interface BotPayload {
   mouseData: { distance: number; time: number; curves: number };
   typingData: { totalChars: number; totalTime: number; backspaces: number };
-  fingerprint: string;
+  fingerprint?: string;
 }
 
 export function calculateBotScore(payload: BotPayload): number {
