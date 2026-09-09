@@ -12,6 +12,7 @@ export default function Login() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
@@ -44,7 +45,15 @@ export default function Login() {
           </div>
           <form onSubmit={submit} className="space-y-4">
             <div><label className="block text-sm text-slate-400 mb-2">Email</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" placeholder="you@company.com" /></div>
-            <div><label className="block text-sm text-slate-400 mb-2">Password</label><input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60" placeholder="Minimum 6 characters" /></div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-2" htmlFor="password">Password</label>
+              <div className="relative">
+                <input id="password" type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-white focus:outline-none focus:border-blue-500/60" placeholder="Minimum 6 characters" />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-200 focus:outline-none focus:text-blue-400">
+                  <Icons.Eye className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
             {msg && <p className="text-sm text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3">{msg}</p>}
             <button type="submit" disabled={busy} className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium">{busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Create account"}</button>
           </form>
