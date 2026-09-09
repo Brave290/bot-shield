@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { ArrowLeft, Loader2, Shield } from "lucide-react";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
+import { CustomSelect } from "@/components/custom-select";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,11 +87,11 @@ export default function NewProjectPage() {
           </div>
           <div>
             <label htmlFor="sensitivity" className="block text-sm font-medium text-slate-300 mb-2">Detection sensitivity</label>
-            <select id="sensitivity" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+            <CustomSelect id="sensitivity" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)}>
               <option value="strict">Strict</option>
               <option value="balanced">Balanced</option>
               <option value="loose">Loose</option>
-            </select>
+            </CustomSelect>
           </div>
           {error && <p role="alert" className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">{error}</p>}
           <button type="submit" disabled={saving} className="w-full inline-flex justify-center items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-medium">

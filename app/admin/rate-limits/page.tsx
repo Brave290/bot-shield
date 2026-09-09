@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Navigation } from "@/components/Navigation";
 import { BrandLoader } from "@/components/loader";
 import { toast } from "@/components/toast";
+import { CustomSelect } from "@/components/custom-select";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -55,10 +56,10 @@ export default function RateLimits() {
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-2">Enabled</label>
-                <select defaultValue={l.enabled ? "true" : "false"} onChange={(e) => save({ ...l, enabled: e.target.value === "true" })} className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white">
+                <CustomSelect defaultValue={l.enabled ? "true" : "false"} onChange={(e) => save({ ...l, enabled: e.target.value === "true" })}>
                   <option value="true">Yes</option>
                   <option value="false">No</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
           </div>

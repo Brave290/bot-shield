@@ -11,12 +11,17 @@ import { ask } from "@/components/confirm";
 import { V6Card, V6Skeleton, V6TabContent } from "@/components/v6-ui";
 import { AdminQuickLinks } from "@/components/admin-quick-links";
 import { BrandLoader } from "@/components/loader";
+import { CustomSelect } from "@/components/custom-select";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "ping" | "cms";
 
 export default function Admin() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "overview";
+    const value = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    return value && ["overview", "messages", "applications", "pricing", "rules", "admins", "audit", "ping", "cms"].includes(value) ? value : "overview";
+  });
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   const [me, setMe] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -31,6 +36,12 @@ export default function Admin() {
   const [cmsPages, setCmsPages] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState("");
   const [transferTo, setTransferTo] = useState("");
+
+  const changeTab = (nextTab: Tab) => {
+    setTab(nextTab);
+    const url = nextTab === "overview" ? "/admin" : `/admin?tab=${nextTab}`;
+    window.history.replaceState(null, "", url);
+  };
 
   const headers = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -110,15 +121,15 @@ export default function Admin() {
     <Navigation />
     <div className="lg:flex min-h-screen pt-24">
 <aside className="hidden lg:block fixed top-24 bottom-0 left-0 w-72 border-r border-slate-800 bg-slate-900/30 overflow-y-auto"><nav className="p-6 space-y-1">
-<button onClick={() => setTab("overview")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "overview" ? "bg-blue-600/15 text-blue-400 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="chart" className="w-4 h-4 shrink-0" />Overview</button>
-<button onClick={() => setTab("rules")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "rules" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="shield" className="w-4 h-4 shrink-0" />Project Rules</button>
+<button onClick={() => changeTab("overview")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "overview" ? "bg-blue-600/15 text-blue-400 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="chart" className="w-4 h-4 shrink-0" />Overview</button>
+<button onClick={() => changeTab("rules")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "rules" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="shield" className="w-4 h-4 shrink-0" />Project Rules</button>
 <a href="/admin/rate-limits" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="zap" className="w-4 h-4 shrink-0" />Rate Limits</a>
 <a href="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="settings" className="w-4 h-4 shrink-0" />Settings</a>
 <a href="/dashboard/analytics" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="trending" className="w-4 h-4 shrink-0" />Analytics</a>
-<button onClick={() => setTab("admins")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "admins" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="users" className="w-4 h-4 shrink-0" />Admins</button>
-<button onClick={() => setTab("audit")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "audit" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="file" className="w-4 h-4 shrink-0" />Audit Log</button>
-<button onClick={() => setTab("ping")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "ping" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="activity" className="w-4 h-4 shrink-0" />Ping / Cron</button>
-<button onClick={() => setTab("messages")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "messages" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="mail" className="w-4 h-4 shrink-0" />Messages</button>
+<button onClick={() => changeTab("admins")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "admins" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="users" className="w-4 h-4 shrink-0" />Admins</button>
+<button onClick={() => changeTab("audit")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "audit" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="file" className="w-4 h-4 shrink-0" />Audit Log</button>
+<button onClick={() => changeTab("ping")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "ping" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="activity" className="w-4 h-4 shrink-0" />Ping / Cron</button>
+<button onClick={() => changeTab("messages")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "messages" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="mail" className="w-4 h-4 shrink-0" />Messages</button>
 <a href="/test" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="flask" className="w-4 h-4 shrink-0" />Playground</a>
 <a href="/docs" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="book" className="w-4 h-4 shrink-0" />Docs</a>
 </nav></aside>
@@ -138,13 +149,13 @@ export default function Admin() {
         <aside className="min-w-0 max-w-full lg:sticky lg:top-28 self-start">
           <div className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
             {tabs.map((t) => (
-              <button key={t.id} onClick={() => setTab(t.id)} className={`px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap text-left ${tab === t.id ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>{t.label}</button>
+              <button key={t.id} onClick={() => changeTab(t.id)} className={`px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap text-left ${tab === t.id ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>{t.label}</button>
             ))}
           </div>
         </aside>
 
         <section className="min-w-0 max-w-full">
-          {me && <AdminQuickLinks onJump={setTab} />}
+          {me && <AdminQuickLinks onJump={changeTab} />}
 
           {tab === "overview" && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -220,10 +231,10 @@ export default function Admin() {
                   </div>
                   <div className="grid sm:grid-cols-3 gap-4">
                     <div><label className="block text-xs text-slate-500 mb-2">Mode</label>
-                      <select id={`md-${p.id}`} defaultValue={p.mode || "active"} className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60">
+                      <CustomSelect id={`md-${p.id}`} defaultValue={p.mode || "active"}>
                         <option value="active">Active (block bots)</option>
                         <option value="shadow">Shadow (log only)</option>
-                      </select>
+                      </CustomSelect>
                     </div>
                     <div><label className="block text-xs text-slate-500 mb-2">Whitelist IPs</label><input id={`al-${p.id}`} defaultValue={(p.allowed_ips || []).join(", ")} placeholder="1.2.3.4, 5.6.7.8" className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60" /></div>
                     <div><label className="block text-xs text-slate-500 mb-2">Blacklist IPs</label><input id={`bl-${p.id}`} defaultValue={(p.blocked_ips || []).join(", ")} placeholder="9.9.9.9" className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60" /></div>

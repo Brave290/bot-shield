@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { SdkView } from "@/components/dashboard/sdk-view";
+import { ask } from "@/components/confirm";
 import { createClient } from "@supabase/supabase-js";
 import { 
   ArrowLeft, 
@@ -51,8 +52,20 @@ function ProjectDetailContent() {
   }, [projectId, router]);
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this project?")) return;
-    await supabase.from("projects").delete().eq("id", projectId);
+    const confirmed = await ask({
+      title: "Delete this project?",
+      message: `This permanently deletes ${project.name}, its verification logs, and rate-limit history. This action cannot be undone.`,
+      confirmLabel: "Delete project",
+      danger: true,
+    });
+    if (!confirmed) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch("/api/projects/delete", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session?.access_token || ""}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: projectId }),
+    });
+    if (!response.ok) return;
     router.push("/dashboard");
   };
 

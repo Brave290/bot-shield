@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 
 export async function GET() {
+  const limit = await checkRateLimit("demo_keys_ip", await getClientIP());
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many demo-key requests. Try again later." },
+      { status: 429, headers: { "Retry-After": String(Math.max(1, limit.resetInSeconds)) } },
+    );
+  }
+
   const name = "Public Playground";
   let { data } = await supabaseAdmin.from("projects").select("*").eq("name", name).single();
   if (!data) {

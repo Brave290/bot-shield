@@ -15,7 +15,7 @@ import {
   Code2
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface NavItem {
   label: string;
@@ -34,6 +34,7 @@ interface DashboardShellProps {
 export function DashboardShell({ children, userType, userName, onLogout }: DashboardShellProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
+  const queryTab = useSearchParams().get("tab");
 
   // Define navigation based on user type
   const navItems: NavItem[] = userType === "admin" 
@@ -89,7 +90,8 @@ export function DashboardShell({ children, userType, userName, onLogout }: Dashb
         {/* Navigation */}
         <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href.includes("?") && pathname === item.href.split("?")[0]);
+            const itemUrl = new URL(item.href, "https://botshield.local");
+            const isActive = pathname === itemUrl.pathname && (itemUrl.searchParams.get("tab") ? queryTab === itemUrl.searchParams.get("tab") : !queryTab);
             const Icon = item.icon;
             
             return (
@@ -147,7 +149,10 @@ export function DashboardShell({ children, userType, userName, onLogout }: Dashb
           </button>
           <div className="hidden lg:block">
             <h1 className="text-lg font-semibold text-white capitalize">
-              {navItems.find(n => n.href === pathname || (n.href.includes("?") && pathname.startsWith(n.href.split("?")[0])))?.label || "Dashboard"}
+              {navItems.find((n) => {
+                const itemUrl = new URL(n.href, "https://botshield.local");
+                return pathname === itemUrl.pathname && (itemUrl.searchParams.get("tab") ? queryTab === itemUrl.searchParams.get("tab") : !queryTab);
+              })?.label || "Dashboard"}
             </h1>
           </div>
           <div className="flex items-center gap-4">

@@ -17,7 +17,14 @@ export async function GET(req: Request) {
   const desc = (t: string) => supabaseAdmin.from(t).select("*").order("created_at", { ascending: false });
   if (type === "me") return NextResponse.json(admin);
   if (type === "messages") { const { data } = await desc("contact_messages"); return NextResponse.json(data || []); }
-  if (type === "applications") { const { data } = await desc("job_applications"); return NextResponse.json(data || []); }
+  if (type === "applications") {
+    const { data } = await desc("job_applications");
+    const applications = await Promise.all((data || []).map(async (application: any) => {
+      const { data: signed } = await supabaseAdmin.storage.from("careers").createSignedUrl(application.cv_url, 60 * 60);
+      return { ...application, cv_url: signed?.signedUrl || "" };
+    }));
+    return NextResponse.json(applications);
+  }
   if (type === "pricing") { const { data } = await supabaseAdmin.from("plan_pricing").select("*"); return NextResponse.json(data || []); }
   if (type === "admins") { const { data } = await supabaseAdmin.from("admins").select("*").order("created_at"); return NextResponse.json(data || []); }
   if (type === "audit") { const { data } = await supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50); return NextResponse.json(data || []); }

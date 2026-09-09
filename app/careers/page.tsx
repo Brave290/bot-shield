@@ -1,11 +1,9 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { createClient } from "@supabase/supabase-js";
 import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const roles = ["Senior Backend Engineer", "Security Researcher", "Developer Advocate"];
 
 const template = (role: string) =>
@@ -44,12 +42,18 @@ export default function Careers() {
 
     setState("sending");
     try {
-      const path = `${Date.now()}-${cv!.name.replace(/\s+/g, "-")}`;
-      const up = await supabase.storage.from("careers").upload(path, cv!);
-      if (up.error) throw up.error;
-      const { data } = supabase.storage.from("careers").getPublicUrl(path);
-      const ins = await supabase.from("job_applications").insert({ role, name: form.name, email: form.email, portfolio: form.portfolio, note: form.note, cv_url: data.publicUrl });
-      if (ins.error) throw ins.error;
+      const body = new FormData();
+      body.append("role", role);
+      body.append("name", form.name);
+      body.append("email", form.email);
+      body.append("portfolio", form.portfolio);
+      body.append("note", form.note);
+      body.append("cv", cv!);
+      const response = await fetch("/api/careers/apply", { method: "POST", body });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || "Application failed");
+      }
       setState("sent");
     } catch { setState("error"); }
   };
