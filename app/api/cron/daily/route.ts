@@ -63,7 +63,8 @@ export async function GET(req: Request) {
     results.error = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ ok: false, ...results }, { status: 500 });
   } finally {
-    await supabaseAdmin.from("ping_history").insert({
+    await supabaseAdmin.from("cron_job_history").insert({
+      job_name: "daily-maintenance",
       triggered_by: trigger,
       status,
       duration_ms: Date.now() - startedAt,

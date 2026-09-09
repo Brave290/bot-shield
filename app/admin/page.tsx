@@ -14,13 +14,13 @@ import { BrandLoader } from "@/components/loader";
 import { CustomSelect } from "@/components/custom-select";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "ping" | "cms";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "cron" | "cms";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "overview";
     const value = new URLSearchParams(window.location.search).get("tab") as Tab | null;
-    return value && ["overview", "messages", "applications", "pricing", "rules", "admins", "audit", "ping", "cms"].includes(value) ? value : "overview";
+    return value && ["overview", "messages", "applications", "pricing", "rules", "admins", "audit", "cron", "cms"].includes(value) ? value : "overview";
   });
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   const [me, setMe] = useState<any>(null);
@@ -29,7 +29,7 @@ export default function Admin() {
   const [pricing, setPricing] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [audit, setAudit] = useState<any[]>([]);
-  const [pings, setPings] = useState<any[]>([]);
+  const [cronRuns, setCronRuns] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [myIp, setMyIp] = useState("");
   const [stats, setStats] = useState<any>({});
@@ -53,8 +53,8 @@ export default function Admin() {
     const get = (t: string) => fetch(`/api/admin/data?type=${t}`, { headers: h });
     const m = await get("messages");
     if (m.status === 403) { setState("denied"); return; }
-    const [a, p, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/ping", { headers: h })]);
-    setMessages(await m.json()); setApps(await a.json()); setPricing(await p.json()); setAdmins(await ad.json()); setStats(await st.json()); setAudit(await au.json()); setProjects(await pr.json()); setMe(await meRes.json()); setPings(await pn.json());
+    const [a, p, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/cron", { headers: h })]);
+    setMessages(await m.json()); setApps(await a.json()); setPricing(await p.json()); setAdmins(await ad.json()); setStats(await st.json()); setAudit(await au.json()); setProjects(await pr.json()); setMe(await meRes.json()); setCronRuns(await pn.json());
     setState("ready");
   }, [headers]);
 
@@ -114,7 +114,7 @@ export default function Admin() {
     { id: "rules", label: "Project rules" },
     { id: "admins", label: "Admins" },
     { id: "audit", label: "Audit log" },
-    { id: "ping", label: "Ping" },
+    { id: "cron", label: "Cron jobs" },
   ];
 
   return (<>
@@ -128,7 +128,7 @@ export default function Admin() {
 <a href="/dashboard/analytics" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="trending" className="w-4 h-4 shrink-0" />Analytics</a>
 <button onClick={() => changeTab("admins")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "admins" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="users" className="w-4 h-4 shrink-0" />Admins</button>
 <button onClick={() => changeTab("audit")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "audit" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="file" className="w-4 h-4 shrink-0" />Audit Log</button>
-<button onClick={() => changeTab("ping")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "ping" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="activity" className="w-4 h-4 shrink-0" />Ping / Cron</button>
+<button onClick={() => changeTab("cron")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "cron" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="activity" className="w-4 h-4 shrink-0" />Cron jobs</button>
 <button onClick={() => changeTab("messages")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "messages" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="mail" className="w-4 h-4 shrink-0" />Messages</button>
 <a href="/test" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="flask" className="w-4 h-4 shrink-0" />Playground</a>
 <a href="/docs" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="book" className="w-4 h-4 shrink-0" />Docs</a>
@@ -278,25 +278,25 @@ export default function Admin() {
             </div>
           )}
 
-                    {tab === "ping" && (
+                    {tab === "cron" && (
             <div className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-2xl font-bold text-white">Ping history</h2>
-                  <p className="text-xs text-slate-500 font-light mt-1">Last 20 manual and scheduled cron runs</p>
+                  <h2 className="font-serif text-2xl font-bold text-white">Cron jobs</h2>
+                  <p className="text-xs text-slate-500 font-light mt-1">Run and monitor scheduled maintenance jobs from one place.</p>
                 </div>
                 <button onClick={async () => {
                   toast("info", "Running cron job...");
-                  const res = await fetch("/api/admin/ping", { method: "POST", headers: await headers() });
+                  const res = await fetch("/api/admin/cron", { method: "POST", headers: await headers() });
                   const d = await res.json();
-                  if (!res.ok) { toast("error", d.error || "Ping failed"); return; }
+                  if (!res.ok) { toast("error", d.error || "Cron job failed"); return; }
                   toast("success", "Cron job completed in " + d.duration_ms + "ms");
                   await loadAll();
                 }} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Run cron now</button>
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden">
                 <div className="divide-y divide-slate-800/60">
-                  {pings.map((p) => (
+                  {cronRuns.map((p) => (
                     <div key={p.id} className="px-5 py-4 flex flex-wrap gap-x-4 gap-y-2 text-xs">
                       <span className="text-slate-600 font-mono">{new Date(p.created_at).toLocaleString()}</span>
                       <span className="text-white font-medium">{p.triggered_by}</span>

@@ -12,7 +12,7 @@ export function AdminQuickLinks({ onJump }: { onJump: (t: any) => void }) {
     ["Rules", "rules", "shield"],
     ["Admins", "admins", "users"],
     ["Audit", "audit", "file"],
-    ["Ping", "ping", "activity"],
+    ["Cron jobs", "cron", "activity"],
     ["Messages", "messages", "mail"],
   ];
   const pill = "shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-slate-800 bg-slate-900/60 hover:border-blue-500/60 hover:bg-blue-500/10 text-xs text-slate-300 hover:text-white transition-colors";

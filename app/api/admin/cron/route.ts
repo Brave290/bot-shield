@@ -2,10 +2,18 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getAdmin } from "@/lib/admin";
 
+const JOB_NAME = "daily-maintenance";
+
 export async function GET(req: Request) {
   const admin = await getAdmin(req);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { data } = await supabaseAdmin.from("ping_history").select("*").order("created_at", { ascending: false }).limit(20);
+  const { data, error } = await supabaseAdmin
+    .from("cron_job_history")
+    .select("*")
+    .eq("job_name", JOB_NAME)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) return NextResponse.json({ error: "Unable to load cron history" }, { status: 500 });
   return NextResponse.json(data || []);
 }
 
@@ -19,20 +27,19 @@ export async function POST(req: Request) {
       headers: {
         authorization: `Bearer ${process.env.CRON_SECRET || ""}`,
         "x-botshield-trigger": `admin:${admin.email}`,
-      }
+      },
     });
     const duration = Date.now() - start;
     const result = await res.json();
-    await supabaseAdmin.from("ping_history").insert({
-      triggered_by: admin.email, status: res.ok ? "success" : "error",
-      duration_ms: duration, result
-    });
     return NextResponse.json({ ok: res.ok, duration_ms: duration, result });
-  } catch (err) {
-    await supabaseAdmin.from("ping_history").insert({
-      triggered_by: admin.email, status: "error", duration_ms: Date.now() - start,
-      result: { error: String(err) }
+  } catch (error) {
+    await supabaseAdmin.from("cron_job_history").insert({
+      job_name: JOB_NAME,
+      triggered_by: admin.email,
+      status: "error",
+      duration_ms: Date.now() - start,
+      result: { error: String(error) },
     });
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
