@@ -51,10 +51,17 @@ export default function Admin() {
   const loadAll = useCallback(async () => {
     const h = await headers();
     const get = (t: string) => fetch(`/api/admin/data?type=${t}`, { headers: h });
+    const readArray = async (response: Response) => {
+      const body = await response.json().catch(() => null);
+      return Array.isArray(body) ? body : [];
+    };
     const m = await get("messages");
     if (m.status === 403) { setState("denied"); return; }
     const [a, p, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/cron", { headers: h })]);
-    setMessages(await m.json()); setApps(await a.json()); setPricing(await p.json()); setAdmins(await ad.json()); setStats(await st.json()); setAudit(await au.json()); setProjects(await pr.json()); setMe(await meRes.json()); setCronRuns(await pn.json());
+    const [messagesData, appsData, pricingData, adminsData, auditData, projectsData, meData, cronData, statsData] = await Promise.all([
+      readArray(m), readArray(a), readArray(p), readArray(ad), readArray(au), readArray(pr), meRes.json().catch(() => null), pn.json().catch(() => null), st.json().catch(() => null),
+    ]);
+    setMessages(messagesData); setApps(appsData); setPricing(pricingData); setAdmins(adminsData); setStats(statsData && !Array.isArray(statsData) ? statsData : {}); setAudit(auditData); setProjects(projectsData); setMe(meData && !Array.isArray(meData) ? meData : null); setCronRuns(Array.isArray(cronData) ? cronData : []);
     setState("ready");
   }, [headers]);
 
