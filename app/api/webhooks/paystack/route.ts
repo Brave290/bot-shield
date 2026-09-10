@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
@@ -14,16 +14,18 @@ export async function POST(req: Request) {
 
     // Verify webhook signature using Paystack's secret key
     const hash = createHmac("sha512", secret).update(body).digest("hex");
-    if (hash !== signature) {
+    const expected = Buffer.from(hash, "utf8");
+    const received = Buffer.from(signature, "utf8");
+    if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
       console.error("[Paystack] Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const event = JSON.parse(body);
+    const event = JSON.parse(body) as { event?: string; data?: { metadata?: { user_id?: string } } };
 
     // Only process successful charges
     if (event.event === "charge.success") {
-      const metadata = event.data.metadata || {};
+      const metadata = event.data?.metadata || {};
       const userId = metadata.user_id;
 
       if (!userId) {

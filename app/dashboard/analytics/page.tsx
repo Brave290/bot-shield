@@ -6,22 +6,36 @@ import { BrandLoader } from "@/components/loader";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
+type AnalyticsRow = { name: string; count: number };
+type DailyRow = { label: string; requests: number; blocked: number };
+type ThreatRow = { created_at: string; bot_type: string; score: number; country?: string };
+type AnalyticsData = { totals: { requests: number; blocked: number; humans: number }; daily: DailyRow[]; botTypes: AnalyticsRow[]; countries: AnalyticsRow[]; threats: ThreatRow[] };
+
 export default function Analytics() {
   const [range, setRange] = useState("7d");
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data: sess } = await supabase.auth.getSession();
       const res = await fetch(`/api/analytics?range=${range}`, { headers: { Authorization: `Bearer ${sess.session?.access_token || ""}` } });
-      if (res.ok) setData(await res.json());
+      const body = await res.json().catch(() => null);
+      if (res.ok && body && typeof body === "object") {
+        setData({
+          ...body,
+          totals: body.totals || { requests: 0, blocked: 0, humans: 0 },
+          daily: Array.isArray(body.daily) ? body.daily : [], botTypes: Array.isArray(body.botTypes) ? body.botTypes : [], countries: Array.isArray(body.countries) ? body.countries : [], threats: Array.isArray(body.threats) ? body.threats : [],
+        } as AnalyticsData);
+      } else {
+        setData({ totals: { requests: 0, blocked: 0, humans: 0 }, daily: [], botTypes: [], countries: [], threats: [] });
+      }
     })();
   }, [range]);
 
   if (!data) return (<><Navigation /><BrandLoader /></>);
 
-  const maxDaily = Math.max(1, ...data.daily.map((d: any) => d.requests));
-  const maxBot = Math.max(1, ...data.botTypes.map((b: any) => b.count));
+  const maxDaily = Math.max(1, ...data.daily.map((d) => d.requests));
+  const maxBot = Math.max(1, ...data.botTypes.map((b) => b.count));
   const rate = data.totals.requests ? Math.round((data.totals.blocked / data.totals.requests) * 100) : 0;
 
   return (<>
@@ -51,7 +65,7 @@ export default function Analytics() {
       <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
         <h2 className="text-white font-semibold mb-6">Traffic over time</h2>
         <div className="flex items-end gap-1 h-40">
-          {data.daily.map((d: any, i: number) => (
+          {data.daily.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col justify-end h-full" title={`${d.label}: ${d.requests} requests, ${d.blocked} blocked`}>
               <div className="bg-red-500/70 rounded-t" style={{ height: `${(d.blocked / maxDaily) * 100}%` }} />
               <div className="bg-blue-600/70 rounded-b" style={{ height: `${((d.requests - d.blocked) / maxDaily) * 100}%` }} />
@@ -66,7 +80,7 @@ export default function Analytics() {
         <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
           <h2 className="text-white font-semibold mb-4">Bot types</h2>
           <div className="space-y-3">
-            {data.botTypes.map((b: any) => (
+            {data.botTypes.map((b) => (
               <div key={b.name}>
                 <div className="flex justify-between text-xs mb-1"><span className="text-slate-300">{b.name}</span><span className="text-slate-500">{b.count}</span></div>
                 <div className="h-2 rounded-full bg-slate-800"><div className="h-full rounded-full bg-red-500/80" style={{ width: `${(b.count / maxBot) * 100}%` }} /></div>
@@ -78,7 +92,7 @@ export default function Analytics() {
         <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
           <h2 className="text-white font-semibold mb-4">Top countries</h2>
           <div className="space-y-3">
-            {data.countries.map((c: any) => (
+            {data.countries.map((c) => (
               <div key={c.name} className="flex justify-between text-sm"><span className="text-slate-300 uppercase">{c.name}</span><span className="text-slate-500">{c.count}</span></div>
             ))}
             {data.countries.length === 0 && <p className="text-slate-500 text-sm font-light">No geo data yet.</p>}
@@ -89,7 +103,7 @@ export default function Analytics() {
       <div className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
         <h2 className="text-white font-semibold mb-4">Recent threats</h2>
         <div className="divide-y divide-slate-800/60">
-          {data.threats.map((t: any, i: number) => (
+          {data.threats.map((t, i) => (
             <div key={i} className="py-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
               <span className="text-slate-600 font-mono">{new Date(t.created_at).toLocaleString()}</span>
               <span className="text-red-400 font-medium">{t.bot_type}</span>

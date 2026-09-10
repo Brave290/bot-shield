@@ -57,6 +57,7 @@ export default function Login() {
             {msg && <p className="text-sm text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3">{msg}</p>}
             <button type="submit" disabled={busy} className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium">{busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Create account"}</button>
           </form>
+          {mode === "signin" && <a href="/reset-password" className="mt-4 block text-center text-sm text-slate-500 hover:text-blue-400">Forgot your password?</a>}
           <p className="text-center text-sm text-slate-500 mt-6">
             {mode === "signin" ? "New to BotShield?" : "Already have an account?"}{" "}
             <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMsg(""); }} className="text-blue-400 hover:text-blue-300">{mode === "signin" ? "Create an account" : "Sign in"}</button>
