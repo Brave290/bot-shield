@@ -9,18 +9,18 @@ import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
 import { ask } from "@/components/confirm";
 import { V6Card, V6Skeleton, V6TabContent } from "@/components/v6-ui";
-import { AdminQuickLinks } from "@/components/admin-quick-links";
 import { BrandLoader } from "@/components/loader";
 import { CustomSelect } from "@/components/custom-select";
+import { AdminFeatureLab } from "@/components/admin-feature-lab";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms" | "features";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "overview";
     const value = new URLSearchParams(window.location.search).get("tab") as Tab | null;
-    return value && ["overview", "messages", "applications", "pricing", "users", "rules", "admins", "audit", "cron", "cms"].includes(value) ? value : "overview";
+    return value && ["overview", "messages", "applications", "pricing", "users", "rules", "admins", "audit", "cron", "cms", "features"].includes(value) ? value : "overview";
   });
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   const [me, setMe] = useState<any>(null);
@@ -97,6 +97,11 @@ export default function Admin() {
     await act({ action: "update-user-plan", user_id: userId, tier_name: tierName }, "User plan updated");
   };
 
+  const deleteUser = async (user: any) => {
+    const confirmed = await ask({ title: `Delete ${user.email || "this user"}?`, message: "This permanently removes the Auth account, projects, verification logs, team invitations, and subscription record. It cannot be undone.", confirmLabel: "Delete permanently", danger: true });
+    if (confirmed) await act({ action: "delete-user", user_id: user.id }, "User permanently deleted");
+  };
+
   const saveRules = async (p: any) => {
     const list = (id: string) => ((document.getElementById(id) as HTMLInputElement)?.value || "").split(",").map((s) => s.trim()).filter(Boolean);
     const mode = (document.getElementById(`md-${p.id}`) as HTMLSelectElement)?.value || "active";
@@ -126,7 +131,7 @@ export default function Admin() {
         <nav className="flex items-center justify-around gap-1 lg:mt-6 lg:block lg:space-y-7">
           <div className="lg:space-y-1"><p className="mb-2 hidden px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600 lg:block">Workspace</p>{[["overview", "Overview", "chart"], ["users", "Users", "users"], ["rules", "Project rules", "shield"], ["pricing", "Pricing", "file"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium transition lg:flex-row lg:gap-3 lg:py-3 lg:text-sm ${tab === id ? "bg-blue-600/15 text-blue-300 ring-1 ring-blue-500/30" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
           <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operations</p>{[["messages", "Messages", "mail"], ["applications", "Applications", "file"], ["rules", "Security rules", "shield"], ["audit", "Audit log", "file"], ["cron", "Cron jobs", "activity"], ["admins", "Administrators", "users"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${tab === id ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
-          <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Tools</p><button onClick={() => changeTab("cms")} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${tab === "cms" ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name="book" className="h-4 w-4" />Content CMS</button><a href="/admin/rate-limits" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="zap" className="h-4 w-4" />Rate limits</a><a href="/admin/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="settings" className="h-4 w-4" />Settings</a><a href="/dashboard/analytics" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="trending" className="h-4 w-4" />Analytics</a><a href="/test" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="flask" className="h-4 w-4" />Playground</a><a href="/docs" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="book" className="h-4 w-4" />Docs</a></div>
+          <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Tools</p><button onClick={() => changeTab("features")} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${tab === "features" ? "bg-violet-500/15 text-violet-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name="chart" className="h-4 w-4" />Feature lab</button><button onClick={() => changeTab("cms")} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${tab === "cms" ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name="book" className="h-4 w-4" />Content CMS</button><a href="/admin/rate-limits" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="zap" className="h-4 w-4" />Rate limits</a><a href="/admin/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="settings" className="h-4 w-4" />Settings</a><a href="/dashboard/analytics" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="trending" className="h-4 w-4" />Analytics</a><a href="/test" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="flask" className="h-4 w-4" />Playground</a><a href="/docs" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="book" className="h-4 w-4" />Docs</a></div>
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
@@ -141,8 +146,6 @@ export default function Admin() {
       </div>
 
       <section className="min-w-0 max-w-full">
-          {me && <div className="mb-6"><AdminQuickLinks onJump={changeTab} /></div>}
-
           {tab === "overview" && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[["Visitors", stats.visitors], ["Users", stats.users], ["Projects", stats.projects], ["Payments", stats.payments], ["Messages", stats.messages], ["Applications", stats.applications], ["Admins", stats.admins]].map(([l, v]) => (
@@ -153,6 +156,8 @@ export default function Admin() {
               ))}
             </div>
           )}
+
+          {tab === "features" && <AdminFeatureLab onJump={changeTab} />}
 
           {tab === "messages" && (
             <div className="space-y-4">
@@ -216,6 +221,7 @@ export default function Admin() {
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                     <div className="min-w-[150px]"><CustomSelect defaultValue={u.tier_name || "Hobby"} id={`user-plan-${u.id}`}><option value="Hobby">Hobby</option><option value="Pro">Pro</option><option value="Enterprise">Enterprise</option></CustomSelect></div>
                     <button onClick={() => saveUserPlan(u.id, (document.getElementById(`user-plan-${u.id}`) as HTMLInputElement).value)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-500">Save plan</button>
+                    {me?.role === "owner" && <button onClick={() => deleteUser(u)} className="rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 transition hover:bg-red-500/10">Delete user</button>}
                   </div>
                 </div>
               ))}

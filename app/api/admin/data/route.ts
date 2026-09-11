@@ -132,6 +132,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, user_id: userId, tier_name: tierName });
   }
 
+  if (body.action === "delete-user") {
+    if (admin.role !== "owner") return NextResponse.json({ error: "Only the owner can permanently delete users" }, { status: 403 });
+    const userId = String(body.user_id || "");
+    if (!userId) return NextResponse.json({ error: "User is required" }, { status: 400 });
+    const { data: target, error: targetError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (targetError || !target.user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (target.user.email?.toLowerCase() === admin.email.toLowerCase()) return NextResponse.json({ error: "You cannot delete your own admin account" }, { status: 400 });
+    const { data: ownedProjects } = await supabaseAdmin.from("projects").select("id,api_key").eq("user_id", userId);
+    for (const project of ownedProjects || []) {
+      await supabaseAdmin.from("verification_logs").delete().eq("project_id", project.id);
+      await supabaseAdmin.from("rate_limit_events").delete().eq("scope_key", project.api_key);
+      await supabaseAdmin.from("project_members").delete().eq("project_id", project.id);
+    }
+    await supabaseAdmin.from("team_invitations").delete().eq("invited_by", userId);
+    await supabaseAdmin.from("projects").delete().eq("user_id", userId);
+    await supabaseAdmin.from("subscription_stats").delete().eq("user_id", userId);
+    await log("delete_user", `${target.user.email || userId} (${userId})`);
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    return NextResponse.json({ ok: true, user_id: userId });
+  }
+
   if (body.action === "remove-admin") {
     const email = String(body.email || "").toLowerCase();
     if (email === admin.email) return NextResponse.json({ error: "You cannot remove yourself" }, { status: 400 });
