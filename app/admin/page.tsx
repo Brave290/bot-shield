@@ -220,8 +220,9 @@ export default function Admin() {
                 <h2 className="font-serif text-2xl font-bold text-white">Users and plans</h2>
                 <p className="mt-1 text-xs text-slate-500">Review registered accounts and assign any available BotShield plan. Changes are recorded in the audit log.</p>
               </div>
-              {users.length === 0 && <p className="text-slate-500 font-light">No registered users found.</p>}
-              {users.map((u) => (
+              <div className="max-h-[calc(100dvh-17rem)] min-h-0 space-y-4 overflow-y-auto overscroll-contain pb-24 pr-1 [scrollbar-width:thin]">
+                {users.length === 0 && <p className="text-slate-500 font-light">No registered users found.</p>}
+                {users.map((u) => (
                 <div key={u.id} className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="break-all text-sm font-medium text-white">{u.email || "No email"}</p>
@@ -234,7 +235,8 @@ export default function Admin() {
                     {me?.role === "owner" && <button onClick={() => deleteUser(u)} className="rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 transition hover:bg-red-500/10">Delete user</button>}
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
