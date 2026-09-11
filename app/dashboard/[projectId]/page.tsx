@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { SdkView } from "@/components/dashboard/sdk-view";
 import { ask } from "@/components/confirm";
+import { toast } from "@/components/toast";
+import { CustomSelect } from "@/components/custom-select";
 import { createClient } from "@supabase/supabase-js";
 import { 
   ArrowLeft, 
@@ -34,6 +36,11 @@ function ProjectDetailContent() {
   const [copied, setCopied] = useState(false);
   const [origins, setOrigins] = useState("");
   const [savingOrigins, setSavingOrigins] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("developer");
+  const [team, setTeam] = useState<{ members: any[]; invitations: any[] }>({ members: [], invitations: [] });
+  const [rotating, setRotating] = useState(false);
+  const [newSecret, setNewSecret] = useState("");
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -47,7 +54,7 @@ function ProjectDetailContent() {
         .eq("user_id", user.id)
         .single();
       
-      if (data) { setProject(data); setOrigins((data.allowed_origins || []).join("\n")); }
+      if (data) { setProject(data); setOrigins((data.allowed_origins || []).join("\n")); const teamResponse = await fetch(`/api/team/invite?projectId=${projectId}`, { headers: { Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ""}` } }); if (teamResponse.ok) setTeam(await teamResponse.json()); }
       setLoading(false);
     };
     fetchProject();
@@ -83,6 +90,19 @@ function ProjectDetailContent() {
     const { error } = await supabase.from("projects").update({ allowed_origins }).eq("id", projectId);
     if (!error) setProject((current: any) => ({ ...current, allowed_origins }));
     setSavingOrigins(false);
+  };
+
+  const inviteMember = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    const response = await fetch("/api/team/invite", { method: "POST", headers: { Authorization: `Bearer ${session.session?.access_token || ""}`, "Content-Type": "application/json" }, body: JSON.stringify({ projectId, email: inviteEmail, role: inviteRole }) });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) { toast("error", result?.error || "Unable to invite member"); return; }
+    setInviteEmail(""); toast("success", "Invitation created"); const refreshed = await fetch(`/api/team/invite?projectId=${projectId}`, { headers: { Authorization: `Bearer ${session.session?.access_token || ""}` } }); if (refreshed.ok) setTeam(await refreshed.json());
+  };
+
+  const rotateSecret = async () => {
+    if (!await ask({ title: "Rotate the secret key?", message: "Your current backend integrations will need the new key. Update them immediately after rotation.", confirmLabel: "Rotate key", danger: true })) return;
+    setRotating(true); const { data: session } = await supabase.auth.getSession(); const response = await fetch("/api/projects/rotate-secret", { method: "POST", headers: { Authorization: `Bearer ${session.session?.access_token || ""}`, "Content-Type": "application/json" }, body: JSON.stringify({ projectId }) }); const result = await response.json().catch(() => null); setRotating(false); if (!response.ok) { toast("error", result?.error || "Unable to rotate key"); return; } setNewSecret(result.secretKey); setProject((current: any) => ({ ...current, secret_key: result.secretKey })); toast("success", "Secret key rotated");
   };
 
   if (loading) {
@@ -272,6 +292,17 @@ function ProjectDetailContent() {
                   <textarea value={origins} onChange={(e) => setOrigins(e.target.value)} rows={3} placeholder="https://your-site.com\nhttp://localhost:3000" className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 font-mono text-sm text-white focus:border-blue-500 focus:outline-none" />
                   <p className="mt-2 text-xs text-slate-500">One exact origin per line. Leave empty to allow browser origins while testing; production sites should be listed explicitly.</p>
                   <button onClick={saveOrigins} disabled={savingOrigins} className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 disabled:opacity-50">{savingOrigins ? "Saving..." : "Save origins"}</button>
+                </div>
+
+                <div className="border-t border-slate-800 pt-6">
+                  <div className="mb-4"><h3 className="text-lg font-semibold text-white">Team access</h3><p className="mt-1 text-xs text-slate-500">Invite collaborators without sharing your secret key.</p></div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_170px_auto]"><input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="developer@company.com" className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" /><CustomSelect value={inviteRole} onChange={(event) => setInviteRole(event.target.value)}><option value="developer">Developer</option><option value="admin">Admin</option><option value="analyst">Analyst</option><option value="viewer">Viewer</option></CustomSelect><button onClick={inviteMember} disabled={!inviteEmail.trim()} className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50">Invite</button></div>
+                  {(team.invitations.length > 0 || team.members.length > 0) && <div className="mt-4 space-y-2">{team.invitations.slice(0, 4).map((invite) => <div key={invite.id} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-xs"><span className="text-slate-300">{invite.email}</span><span className="text-amber-400">Invited · {invite.role}</span></div>)}</div>}
+                </div>
+
+                <div className="border-t border-slate-800 pt-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-lg font-semibold text-white">Secret key rotation</h3><p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-500">Rotate after a team member leaves or if the key may be exposed. Update your backend immediately.</p></div><button onClick={rotateSecret} disabled={rotating} className="rounded-xl border border-amber-500/30 px-4 py-2.5 text-sm font-medium text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">{rotating ? "Rotating..." : "Rotate secret key"}</button></div>
+                  {newSecret && <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Copy this new key now</p><code className="mt-2 block break-all font-mono text-xs text-slate-200">{newSecret}</code><button onClick={() => copyToClipboard(newSecret)} className="mt-3 text-xs text-blue-300 hover:text-white">Copy new secret</button></div>}
                 </div>
 
                 <div className="pt-4 border-t border-slate-800">

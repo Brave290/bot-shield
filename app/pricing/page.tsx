@@ -1,8 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Icons, MotionLink, Footer, PageHero, CTASection, CONTACTS } from "@/components/site";
+import { Icons, Footer, PageHero } from "@/components/site";
 import { Navigation } from "@/components/Navigation";
+import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 const tiers = [
   { name: "Hobby", price: "0", tag: "Side projects", feats: ["1,000 requests / month", "Core behavioral detection", "Community support", "Full source access"] },
@@ -20,13 +24,26 @@ const compare = [
 ];
 
 export default function PricingPage() {
+  const router = useRouter();
   const [prices, setPrices] = useState<Record<string, { price: string; tag: string }>>({});
+  const [checkout, setCheckout] = useState("");
   useEffect(() => {
     fetch("/api/stats/realtime")
       .then((r) => r.json())
       .then((d) => setPrices(d.pricing || {}))
       .catch(() => {});
   }, []);
+  const choosePlan = async (plan: string) => {
+    if (plan === "Hobby") { router.push("/dashboard"); return; }
+    if (plan === "Enterprise") { router.push("/contact"); return; }
+    setCheckout(plan);
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) { router.push("/login?next=/pricing"); return; }
+    const response = await fetch("/api/billing/initialize", { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ tier: plan }) });
+    const result = await response.json().catch(() => null);
+    if (response.ok && result?.authorization_url) window.location.href = result.authorization_url;
+    else { setCheckout(""); window.alert(result?.error || "Billing is not available yet."); }
+  };
   return (
     <>
       <Navigation />
@@ -42,7 +59,7 @@ export default function PricingPage() {
               <ul className="space-y-3.5 mb-10">
                 {t.feats.map((f) => (<li key={f} className="flex items-start gap-3 text-sm text-slate-300 font-light"><span className="mt-0.5 text-blue-400"><Icons.Check /></span>{f}</li>))}
               </ul>
-              <MotionLink href="/dashboard" whileHover={{ scale: 1.02 }} className={`block text-center py-3.5 rounded-xl font-medium ${t.hot ? "bg-blue-600 hover:bg-blue-500 text-white" : "border border-slate-700 hover:border-slate-500 text-white"}`}>Choose {t.name}</MotionLink>
+              <button onClick={() => choosePlan(t.name)} disabled={checkout === t.name} className={`block w-full py-3.5 rounded-xl font-medium disabled:cursor-wait disabled:opacity-60 ${t.hot ? "bg-blue-600 hover:bg-blue-500 text-white" : "border border-slate-700 hover:border-slate-500 text-white"}`}>{checkout === t.name ? "Opening checkout…" : `Choose ${t.name}`}</button>
             </motion.div>
           ))}
         </div>

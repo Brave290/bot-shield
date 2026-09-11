@@ -7,6 +7,11 @@ const challenge = read("app/api/challenge/route.ts");
 const createProject = read("app/api/projects/create/route.ts");
 const verify = read("app/api/verify/route.ts");
 const docs = read("app/api-reference/page.tsx");
+const billing = read("app/api/billing/initialize/route.ts");
+const team = read("app/api/team/invite/route.ts");
+const rotation = read("app/api/projects/rotate-secret/route.ts");
+const admin = read("app/api/admin/data/route.ts");
+const pricing = read("app/pricing/page.tsx");
 
 assert.match(sdk, /data-api-key/, "SDK must support data-api-key auto initialization");
 assert.match(sdk, /DOMContentLoaded/, "SDK must initialize safely after DOM readiness");
@@ -19,4 +24,10 @@ assert.match(verify, /previous_secret_key/, "Verification must support rotated s
 assert.match(docs, /Website widget/, "API docs must include the website integration case");
 assert.match(docs, /Backend verification/, "API docs must include backend verification");
 assert.match(docs, /Raw challenge API/, "API docs must include the raw API case");
+assert.match(billing, /PAYSTACK_SECRET_KEY/, "Billing must require the Paystack server key");
+assert.match(billing, /metadata: \{ user_id: auth.user.id, tier \}/, "Billing must bind checkout to the authenticated user and tier");
+assert.match(team, /team_invitations/, "Team endpoint must persist invitations");
+assert.match(rotation, /previous_secret_key/, "Rotation must retain the previous key for migration");
+assert.match(admin, /delete-user/, "Admin API must expose protected user deletion");
+assert.match(pricing, /api\/billing\/initialize/, "Pricing page must launch checkout");
 console.log("Integration contract tests passed");
