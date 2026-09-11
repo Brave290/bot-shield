@@ -36,6 +36,16 @@
       transform: translateY(10px); transition: transform 0.3s ease;
     }
     .bs-overlay.active .bs-card { transform: translateY(0); }
+    .bs-brand {
+      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px;
+      color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .bs-brand-mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 7px; background: #2563EB;
+      color: #fff; font-size: 15px; line-height: 1;
+    }
     .bs-title { 
       color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif; 
       font-size: 18px; font-weight: 600; margin: 0 0 8px 0;
@@ -207,10 +217,14 @@
         el = document.createElement('div');
         el.id = 'bs-modal';
         el.className = 'bs-overlay';
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-modal', 'true');
+        el.setAttribute('aria-label', 'BotShield verification');
         el.innerHTML = `
           <div class="bs-card">
+            <div class="bs-brand"><span class="bs-brand-mark" aria-hidden="true">✓</span> BotShield</div>
             <div id="bs-content"></div>
-            <div class="bs-footer">Protected by <strong>BotShield</strong></div>
+            <div class="bs-footer">Protected by <strong>BotShield</strong> · Secure behavioral verification</div>
           </div>
         `;
         document.body.appendChild(el);

@@ -16,13 +16,15 @@ export function SdkView({ publicKey }: SdkViewProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getCodeSnippet = (mode: string) => {
+  const getCodeSnippet = () => {
     const baseUrl = "https://bo-tshield.vercel.app/bot-shield.js";
+    // Copied integrations always carry the BotShield-branded verification experience.
+    const copiedMode = "modal";
     return `<script src="${baseUrl}"></script>
 <script>
   BotShield.init({
     apiKey: "${publicKey || 'bs_live_xxxxx'}",
-    mode: "${mode}",
+    mode: "${copiedMode}",
     onSuccess: (token) => {
       console.log("Verified! Token:", token);
       // Send token to your backend for verification
@@ -69,7 +71,7 @@ export function SdkView({ publicKey }: SdkViewProps) {
 
       {/* Mode Selection */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">Choose Verification Mode</h3>
+        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">Preview Verification Mode</h3>
         <div className="grid md:grid-cols-3 gap-4">
           {modes.map((mode) => {
             const Icon = mode.icon;
@@ -77,7 +79,7 @@ export function SdkView({ publicKey }: SdkViewProps) {
             return (
               <button
                 key={mode.id}
-                onClick={() => setActiveMode(mode.id as any)}
+                onClick={() => setActiveMode(mode.id as "invisible" | "modal" | "challenge")}
                 className={`p-4 rounded-xl border text-left transition-all ${
                   isActive 
                     ? "border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20" 
@@ -86,7 +88,7 @@ export function SdkView({ publicKey }: SdkViewProps) {
               >
                 <Icon className={`w-5 h-5 mb-3 ${isActive ? "text-blue-400" : "text-slate-500"}`} />
                 <h4 className={`font-semibold mb-1 ${isActive ? "text-white" : "text-slate-300"}`}>{mode.label}</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">{mode.desc}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{mode.desc}{mode.id === "modal" && " Copied code uses this branded experience."}</p>
               </button>
             );
           })}
@@ -98,7 +100,7 @@ export function SdkView({ publicKey }: SdkViewProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Integration Code</h3>
           <button 
-            onClick={() => copyCode(getCodeSnippet(activeMode))}
+            onClick={() => copyCode(getCodeSnippet())}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-colors"
           >
             {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
@@ -107,9 +109,12 @@ export function SdkView({ publicKey }: SdkViewProps) {
         </div>
         <pre className="bg-slate-950 border border-slate-800 rounded-xl p-6 overflow-x-auto">
           <code className="text-sm text-slate-300 font-mono whitespace-pre">
-            {getCodeSnippet(activeMode)}
+            {getCodeSnippet()}
           </code>
         </pre>
+        <p className="mt-3 text-xs text-slate-500">
+          Copied snippets always include the BotShield-branded verification modal, so your users see the same trusted experience on any website or app.
+        </p>
       </div>
     </div>
   );
