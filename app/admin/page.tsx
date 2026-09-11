@@ -227,7 +227,7 @@ export default function Admin() {
                 <h2 className="font-serif text-2xl font-bold text-white">Users and plans</h2>
                 <p className="mt-1 text-xs text-slate-500">Review registered accounts and assign any available BotShield plan. Changes are recorded in the audit log.</p>
               </div>
-              <div className="max-h-[calc(100dvh-17rem)] min-h-0 space-y-4 overflow-y-auto overscroll-contain pb-24 pr-1 [scrollbar-width:thin]">
+              <div className="space-y-4 pb-24">
                 {users.length === 0 && <p className="text-slate-500 font-light">No registered users found.</p>}
                 {users.map((u) => (
                 <div key={u.id} className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-5 sm:flex-row sm:items-center sm:justify-between">
