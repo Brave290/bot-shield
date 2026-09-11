@@ -1,78 +1,57 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { createHash } from "crypto";
-import { headers } from "next/headers";
+import { createHash, randomUUID } from "crypto";
 import { SignJWT } from "jose";
-import { calculateBotScore } from "@/lib/scoring-engine";
-import { classifyBot, thresholdFor } from "@/lib/bot-type";
+import { calculateBotScore, type BotPayload } from "@/lib/scoring-engine";
+import { classifyBot } from "@/lib/bot-type";
 import { z } from "zod";
 
-// Validate incoming payload structure
 const ChallengePayloadSchema = z.object({
   apiKey: z.string().min(1, "apiKey required"),
-  mouseData: z.object({
-    distance: z.number().min(0),
-    time: z.number().min(0),
-    curves: z.number().min(0),
-  }),
-  typingData: z.object({
-    totalChars: z.number().min(0),
-    totalTime: z.number().min(0),
-    backspaces: z.number().min(0),
-  }),
-  fingerprint: z.string().optional(),
+  mouseData: z.object({ distance: z.number().min(0), time: z.number().min(0), curves: z.number().min(0) }).optional().default({ distance: 0, time: 0, curves: 0 }),
+  typingData: z.object({ totalChars: z.number().min(0), totalTime: z.number().min(0), backspaces: z.number().min(0) }).optional().default({ totalChars: 0, totalTime: 0, backspaces: 0 }),
+  fingerprint: z.string().max(512).optional(),
+  deviceData: z.object({ webdriver: z.boolean().optional(), touchPoints: z.number().min(0).optional(), hardwareConcurrency: z.number().min(0).optional(), platform: z.string().max(128).optional(), language: z.string().max(64).optional(), screen: z.string().max(64).optional() }).optional(),
+  networkData: z.object({ connectionType: z.string().max(64).optional(), saveData: z.boolean().optional() }).optional(),
 });
 
 type ChallengePayload = z.infer<typeof ChallengePayloadSchema>;
 
+function originAllowed(origin: string | null, allowedOrigins: string[]) {
+  if (allowedOrigins.length === 0) return true;
+  return Boolean(origin && allowedOrigins.includes(origin.replace(/\/$/, "")));
+}
+
 function decisionReasons(payload: ChallengePayload, score: number, botType: string) {
   const reasons: string[] = [];
-  if (payload.mouseData.time < 250 || payload.mouseData.curves === 0) reasons.push("automation_pattern");
-  if (payload.typingData.totalChars > 0 && payload.typingData.totalTime / payload.typingData.totalChars < 25) reasons.push("rapid_typing");
+  if ((payload.mouseData?.time || 0) < 500) reasons.push("limited_pointer_history");
+  if ((payload.typingData?.totalChars || 0) > 0 && (payload.typingData?.totalTime || 0) / Math.max(1, payload.typingData?.totalChars || 1) < 25) reasons.push("rapid_typing");
   if (!payload.fingerprint) reasons.push("missing_fingerprint");
+  if (payload.deviceData?.webdriver) reasons.push("webdriver_signal");
   if (botType !== "human") reasons.push("behavioral_risk");
-  if (score >= 85) reasons.push("high_risk_score");
+  if (score >= 80) reasons.push("high_risk_score");
   return reasons.length ? reasons : ["normal_behavior"];
 }
 
 export async function POST(req: Request) {
   try {
-    const rawPayload = await req.json();
-    
-    // Validate payload schema
-    let payload: ChallengePayload;
-    try {
-      payload = ChallengePayloadSchema.parse(rawPayload);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid payload schema" },
-        { status: 400 }
-      );
-    }
-
-    const { apiKey } = payload;
-    const { data: project, error: projErr } = await supabaseAdmin
+    const parsed = ChallengePayloadSchema.safeParse(await req.json());
+    if (!parsed.success) return NextResponse.json({ error: "Invalid payload schema" }, { status: 400 });
+    const payload = parsed.data;
+    const { data: project, error: projectError } = await supabaseAdmin
       .from("projects")
-      .select("*")
-      .eq("api_key", apiKey)
+      .select("id,user_id,api_key,secret_key,allowed_origins,allowed_ips,blocked_ips,mode,sensitivity")
+      .eq("api_key", payload.apiKey)
       .single();
+    if (projectError || !project) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+    if (!originAllowed(req.headers.get("origin"), project.allowed_origins || [])) return NextResponse.json({ error: "origin_not_allowed" }, { status: 403 });
 
-    if (projErr || !project) {
-      return NextResponse.json(
-        { error: "Invalid API key" },
-        { status: 401 }
-      );
-    }
-
-    const requestOrigin = req.headers.get("origin");
-    const allowedOrigins: string[] = project.allowed_origins || [];
-    if (requestOrigin && allowedOrigins.length > 0 && !allowedOrigins.includes(requestOrigin)) {
-      return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403 });
-    }
+    const ip = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+    const ipHash = createHash("sha256").update(ip).digest("hex");
+    if ((project.blocked_ips || []).includes(ip)) return NextResponse.json({ error: "ip_blocked" }, { status: 403 });
 
     const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
+    monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
     const [{ data: subscription }, { data: accountProjects }] = await Promise.all([
       supabaseAdmin.from("subscription_stats").select("tier_name,status").eq("user_id", project.user_id).maybeSingle(),
       supabaseAdmin.from("projects").select("id").eq("user_id", project.user_id),
@@ -82,180 +61,29 @@ export async function POST(req: Request) {
     const monthlyQuota = Number(plan?.monthly_requests ?? 1000);
     if (subscription?.status === "past_due" || subscription?.status === "canceled") return NextResponse.json({ error: "Subscription is not active" }, { status: 402 });
     if (monthlyQuota >= 0 && accountProjects?.length) {
-      const { count: monthlyCount } = await supabaseAdmin.from("verification_logs").select("id", { count: "exact", head: true }).in("project_id", accountProjects.map((item) => item.id)).gte("created_at", monthStart.toISOString());
-      if ((monthlyCount || 0) >= monthlyQuota) return NextResponse.json({ status: "blocked", reason: "Monthly request quota exceeded", tier: tierName, quota: monthlyQuota }, { status: 429 });
+      const { count } = await supabaseAdmin.from("verification_logs").select("id", { count: "exact", head: true }).in("project_id", accountProjects.map((item) => item.id)).gte("created_at", monthStart.toISOString());
+      if ((count || 0) >= monthlyQuota) return NextResponse.json({ error: "Monthly request quota exceeded" }, { status: 429, headers: { "Retry-After": "3600" } });
     }
 
-    const h = await headers();
-    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const ipHash = createHash("sha256").update(ip).digest("hex");
-    const country = (h.get("x-vercel-ip-country") || "unknown").toLowerCase();
-    const allowedIps: string[] = project.allowed_ips || [];
-    const blockedIps: string[] = project.blocked_ips || [];
-    const mode = project.mode || "active";
-    const recordMetric = (blocked: boolean) => supabaseAdmin.rpc("increment_request_metrics", { was_blocked: blocked });
+    const scopeKey = createHash("sha256").update(payload.apiKey).digest("hex");
+    const { data: rawLimit } = await supabaseAdmin.rpc("consume_rate_limit", { p_limit_id: "api_key", p_scope_key: scopeKey }).maybeSingle();
+    const limit = rawLimit as { allowed?: boolean; reset_in_seconds?: number } | null;
+    if (limit && limit.allowed === false) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers: { "Retry-After": String(limit.reset_in_seconds || 60) } });
 
-    const signToken = async (score: number) => {
-      const secret = new TextEncoder().encode(project.secret_key);
-      return await new SignJWT({ 
-        projectId: project.id, 
-        score, 
-        iss: "botshield", 
-        aud: project.id, 
-        purpose: "bot_verification" 
-      })
-        .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .setExpirationTime("5m")
-        .sign(secret);
-    };
-
-    // Check IP blacklist
-    if (blockedIps.includes(ip)) {
-      await supabaseAdmin.from("verification_logs").insert({
-        project_id: project.id,
-        score: 100,
-        bot_type: "blacklisted",
-        status: "blocked",
-        mode,
-        ip_hash: ipHash,
-        country,
-      });
-      await recordMetric(true);
-      return NextResponse.json(
-        { status: "blocked", reason: "IP blacklisted" },
-        { status: 403 }
-      );
-    }
-
-    // Check IP whitelist
-    if (allowedIps.includes(ip)) {
-      await supabaseAdmin.from("verification_logs").insert({
-        project_id: project.id,
-        score: 0,
-        bot_type: "whitelisted",
-        status: "passed",
-        mode,
-        ip_hash: ipHash,
-        country,
-      });
-      await recordMetric(false);
-      const token = await signToken(0);
-      return NextResponse.json({
-        status: "passed",
-        token,
-        score: 0,
-        botType: "whitelisted",
-        mode,
-      });
-    }
-
-    // RATE LIMIT: Enforce with hardcoded defaults; fail closed on error
-    const { data: rateConfig, error: rateErr } = await supabaseAdmin
-      .from("rate_limits")
-      .select("*")
-      .eq("endpoint", "/api/challenge")
-      .single();
-
-    if (rateErr && rateErr.code !== "PGRST116") {
-      // Unexpected error; fail closed
-      console.error("[BotShield] Rate limit config error:", rateErr);
-      return NextResponse.json(
-        { error: "Rate limit check failed" },
-        { status: 503 }
-      );
-    }
-
-    const maxAttempts = rateConfig?.max_attempts || 100;
-    const windowSeconds = rateConfig?.window_seconds || 60;
-
-    const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
-    const rateLimitScope = createHash("sha256").update(apiKey).digest("hex");
-    const { count, error: countErr } = await supabaseAdmin
-      .from("rate_limit_events")
-      .select("*", { count: "exact", head: true })
-      .eq("limit_id", "api_key")
-      .eq("scope_key", rateLimitScope)
-      .gte("created_at", cutoff);
-
-    if (countErr) {
-      console.error("[BotShield] Rate limit count error:", countErr);
-      return NextResponse.json(
-        { error: "Rate limit check failed" },
-        { status: 503 }
-      );
-    }
-
-    if ((count || 0) >= maxAttempts) {
-      return NextResponse.json(
-        {
-          status: "blocked",
-          reason: `Rate limit exceeded (${maxAttempts}/${windowSeconds}s)`,
-        },
-        { status: 429 }
-      );
-    }
-
-    // Record rate limit event
-    await supabaseAdmin.from("rate_limit_events").insert({
-      limit_id: "api_key",
-      scope_key: rateLimitScope,
-    });
-
-    // Calculate bot score
-    let score = 50;
-    try {
-      score = calculateBotScore(payload);
-    } catch (err) {
-      console.error("[BotShield] Scoring error:", err);
-      score = 50; // Default to suspicious
-    }
-
+    const score = calculateBotScore(payload as BotPayload);
     const botType = classifyBot(payload, score);
     const reasons = decisionReasons(payload, score, botType);
-    const wouldBlock = score >= thresholdFor(project.sensitivity);
-    const actuallyBlocked = mode === "active" && wouldBlock;
+    const jti = randomUUID();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const token = await new SignJWT({ projectId: project.id, score, fingerprint: payload.fingerprint || null, jti, iss: "botshield", aud: project.id, purpose: "bot_verification" })
+      .setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("5m").sign(new TextEncoder().encode(project.secret_key));
+    const { error: tokenError } = await supabaseAdmin.from("challenge_tokens").insert({ jti, project_id: project.id, score, fingerprint: payload.fingerprint || null, expires_at: expiresAt });
+    if (tokenError) throw tokenError;
 
-    // Log verification attempt
-    const { error: logErr } = await supabaseAdmin
-      .from("verification_logs")
-      .insert({
-        project_id: project.id,
-        score,
-        bot_type: botType,
-        status: actuallyBlocked ? "blocked" : "passed",
-        mode,
-        ip_hash: ipHash,
-        country,
-      });
-
-    if (logErr) {
-      console.error("[BotShield] Log insert failed:", logErr);
-    }
-    await recordMetric(actuallyBlocked);
-
-    if (actuallyBlocked) {
-      return NextResponse.json(
-        { status: "blocked", score, botType, reasons },
-        { status: 403 }
-      );
-    }
-
-    const token = await signToken(score);
-    return NextResponse.json({
-      status: "passed",
-      token,
-      score,
-      botType,
-      reasons,
-      mode,
-      shadowWouldBlock: wouldBlock,
-    });
-  } catch (err) {
-    console.error("[BotShield] Challenge error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: "issued", mode: project.mode || "active", ip_hash: ipHash, country: (req.headers.get("x-vercel-ip-country") || "unknown").toLowerCase(), browser_fingerprint: payload.fingerprint || null, ip_address: ip });
+    return NextResponse.json({ token, score, botType, reasons, mode: project.mode || "active" });
+  } catch (error) {
+    console.error("[BotShield] Challenge error", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

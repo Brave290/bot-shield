@@ -1,308 +1,106 @@
 /**
- * BotShield SDK v1.2
- * Enterprise-grade bot detection for the modern web
- * Privacy-preserving behavioral analysis
+ * BotShield SDK v2.0
+ * Silent, privacy-conscious behavioral scoring. The server remains the security authority.
  */
-(function (window) {
-  'use strict';
+(function (window, document) {
+  "use strict";
 
-  // Derive API origin from script URL to support custom domains
-  function getAPIBase() {
-    const scripts = document.querySelectorAll('script[src*="bot-shield"]');
-    if (scripts.length > 0) {
-      const src = scripts[scripts.length - 1].src;
-      const url = new URL(src);
-      return url.origin;
-    }
-    return "https://bo-tshield.vercel.app";
+  var script = document.currentScript || Array.prototype.slice.call(document.scripts).reverse().find(function (node) {
+    return /bot-shield\.js(?:$|\?)/i.test(node.src);
+  });
+  var apiOrigin = script && script.src ? new URL(script.src, window.location.href).origin : window.location.origin;
+  var state = { token: null, initialized: false, startedAt: Date.now(), refreshPromise: null };
+  var mouse = { distance: 0, time: 0, curves: 0, lastX: null, lastY: null };
+  var typing = { totalChars: 0, totalTime: 0, backspaces: 0, firstAt: null };
+  var focusEvents = 0;
+  var scrollEvents = 0;
+
+  function configFromScript() {
+    return {
+      apiKey: script && script.getAttribute("data-api-key"),
+      mode: (script && script.getAttribute("data-mode")) || "invisible",
+      delay: Math.max(4000, Number((script && script.getAttribute("data-delay")) || 4000)),
+      onSuccess: function () {}, onBotDetected: function () {}, onError: function () {}
+    };
   }
 
-  const API_BASE = getAPIBase();
+  function fingerprint() {
+    var nav = window.navigator || {};
+    var screen = window.screen || {};
+    var raw = [nav.userAgent, nav.language, nav.platform, nav.hardwareConcurrency, nav.maxTouchPoints, new Date().getTimezoneOffset(), screen.width + "x" + screen.height, screen.colorDepth].join("|");
+    var hash = 0;
+    for (var i = 0; i < raw.length; i += 1) hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+    return "fp_" + Math.abs(hash).toString(36);
+  }
 
-  // Premium styling
-  const style = document.createElement('style');
-  style.innerHTML = `
-    .bs-overlay { 
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
-      backdrop-filter: blur(4px); display: flex; align-items: center; 
-      justify-content: center; z-index: 999999; opacity: 0; 
-      transition: opacity 0.3s ease; pointer-events: none;
-    }
-    .bs-overlay.active { opacity: 1; pointer-events: auto; }
-    .bs-card { 
-      background: #0B0F19; border: 1px solid #1E293B; 
-      border-radius: 12px; padding: 24px; width: 90%; max-width: 380px; 
-      text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); 
-      transform: translateY(10px); transition: transform 0.3s ease;
-    }
-    .bs-overlay.active .bs-card { transform: translateY(0); }
-    .bs-brand {
-      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px;
-      color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif;
-      font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .bs-brand-mark {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 26px; height: 26px; border-radius: 7px; background: #2563EB;
-      color: #fff; font-size: 15px; line-height: 1;
-    }
-    .bs-title { 
-      color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif; 
-      font-size: 18px; font-weight: 600; margin: 0 0 8px 0;
-    }
-    .bs-text { 
-      color: #94A3B8; font-family: system-ui, sans-serif; 
-      font-size: 14px; margin: 0 0 20px 0; line-height: 1.5;
-    }
-    .bs-btn { 
-      background: #2563EB; color: white; border: none; 
-      border-radius: 8px; padding: 10px 20px; font-family: system-ui, sans-serif; 
-      font-size: 14px; font-weight: 500; cursor: pointer; 
-      transition: background 0.2s ease;
-    }
-    .bs-btn:hover { background: #1D4ED8; }
-    .bs-btn:disabled { background: #1E293B; color: #64748B; cursor: not-allowed; }
-    .bs-spinner { 
-      width: 24px; height: 24px; border: 2px solid #1E293B; 
-      border-top-color: #3B82F6; border-radius: 50%; 
-      animation: bs-spin 0.8s linear infinite; margin: 0 auto 16px auto;
-    }
-    .bs-footer { 
-      margin-top: 16px; font-size: 11px; color: #475569; 
-      font-family: system-ui, sans-serif;
-    }
-    .bs-footer a { color: #475569; text-decoration: none; }
-    @keyframes bs-spin { to { transform: rotate(360deg); } }
-  `;
-  document.head.appendChild(style);
+  function telemetry() {
+    var now = Date.now();
+    var nav = window.navigator || {};
+    var connection = nav.connection || nav.mozConnection || nav.webkitConnection || {};
+    return {
+      apiKey: state.config.apiKey,
+      mouseData: { distance: Math.round(mouse.distance), time: Math.round(mouse.time || (now - state.startedAt)), curves: mouse.curves },
+      typingData: { totalChars: typing.totalChars, totalTime: typing.totalTime, backspaces: typing.backspaces },
+      fingerprint: fingerprint(),
+      deviceData: { webdriver: nav.webdriver === true, touchPoints: nav.maxTouchPoints || 0, hardwareConcurrency: nav.hardwareConcurrency || 0, platform: nav.platform || "", language: nav.language || "", screen: (window.screen && window.screen.width) + "x" + (window.screen && window.screen.height) },
+      networkData: { connectionType: connection.effectiveType || connection.type || "", saveData: connection.saveData === true },
+      sessionData: { focusEvents: focusEvents, scrollEvents: scrollEvents, visibility: document.visibilityState }
+    };
+  }
 
-  const BotShield = {
+  function inject(token) {
+    document.querySelectorAll("form[data-botshield]").forEach(function (form) {
+      var input = form.querySelector('input[name="bot_shield_token"]');
+      if (!input) { input = document.createElement("input"); input.type = "hidden"; input.name = "bot_shield_token"; form.appendChild(input); }
+      input.value = token;
+    });
+  }
+
+  function showStatus(text, good) {
+    if (state.config.mode !== "modal") return;
+    var el = document.getElementById("bs-status");
+    if (!el) { el = document.createElement("div"); el.id = "bs-status"; el.setAttribute("role", "status"); el.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;padding:10px 14px;border-radius:10px;color:#fff;background:" + (good ? "#166534" : "#7f1d1d") + ";font:14px system-ui"; document.body.appendChild(el); }
+    el.textContent = text;
+    window.setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1800);
+  }
+
+  function track() {
+    document.addEventListener("mousemove", function (event) {
+      var now = Date.now();
+      if (mouse.lastX !== null) { var dx = event.clientX - mouse.lastX; var dy = event.clientY - mouse.lastY; mouse.distance += Math.sqrt(dx * dx + dy * dy); if (dx !== 0 && dy !== 0) mouse.curves += 1; }
+      mouse.lastX = event.clientX; mouse.lastY = event.clientY; mouse.time = now - state.startedAt;
+    }, { passive: true });
+    document.addEventListener("keydown", function (event) { if (!typing.firstAt) typing.firstAt = Date.now(); if (event.key === "Backspace") typing.backspaces += 1; else if (event.key.length === 1) typing.totalChars += 1; typing.totalTime = Date.now() - typing.firstAt; }, { passive: true });
+    window.addEventListener("focus", function () { focusEvents += 1; });
+    document.addEventListener("scroll", function () { scrollEvents += 1; }, { passive: true });
+  }
+
+  var BotShield = {
     config: null,
-    mouseTracker: null,
-    keyboardTracker: null,
-
-    /**
-     * Initialize BotShield with configuration
-     * Starts behavioral telemetry collection immediately
-     */
     init: function (userConfig) {
-      if (this.config) return this;
-      this.config = Object.assign({
-        apiKey: '',
-        mode: 'invisible',
-        onSuccess: function () {},
-        onBotDetected: function () {},
-        onError: function () {},
-        sensitivity: 'medium'
-      }, userConfig);
-
-      if (!this.config.apiKey) {
-        console.error("[BotShield] Missing apiKey");
-        return;
-      }
-
-      this.startTracking();
-      setTimeout(() => this.verify(), 1000);
+      if (state.initialized) return this;
+      state.config = Object.assign(configFromScript(), userConfig || {});
+      if (!state.config.apiKey) { state.config.onError("Missing data-api-key"); return this; }
+      state.initialized = true; this.config = state.config; track();
+      window.setTimeout(function () { BotShield.refresh(); }, state.config.delay);
       return this;
     },
-
-    /**
-     * Start tracking mouse and keyboard behavior
-     */
-    startTracking: function () {
-      this.mouseTracker = { distance: 0, time: 0, curves: 0, lastX: 0, lastY: 0, startTime: Date.now() };
-      this.keyboardTracker = { totalChars: 0, totalTime: 0, backspaces: 0, startTime: Date.now() };
-
-      document.addEventListener('mousemove', (e) => {
-        if (!this.mouseTracker) return;
-        const dx = e.clientX - this.mouseTracker.lastX;
-        const dy = e.clientY - this.mouseTracker.lastY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        this.mouseTracker.distance += distance;
-        this.mouseTracker.time = Date.now() - this.mouseTracker.startTime;
-        
-        if (dx !== 0 && dy !== 0) {
-          this.mouseTracker.curves++;
-        }
-        
-        this.mouseTracker.lastX = e.clientX;
-        this.mouseTracker.lastY = e.clientY;
-      });
-
-      document.addEventListener('keydown', (e) => {
-        if (!this.keyboardTracker) return;
-        
-        if (e.key === 'Backspace') {
-          this.keyboardTracker.backspaces++;
-        } else if (e.key.length === 1) {
-          this.keyboardTracker.totalChars++;
-          this.keyboardTracker.totalTime = Date.now() - this.keyboardTracker.startTime;
-        }
-      });
-    },
-
-    /**
-     * Generate fingerprint using available browser signals
-     */
-    getFingerprint: function () {
-      const parts = [
-        navigator.userAgent,
-        navigator.language,
-        new Date().getTimezoneOffset(),
-        window.screen.width + 'x' + window.screen.height,
-      ];
-      
-      const str = parts.join('|');
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-      }
-      return 'fp_' + Math.abs(hash).toString(36);
-    },
-
-    /**
-     * Send challenge request with collected behavioral data
-     */
-    verify: async function () {
-      const payload = {
-        apiKey: this.config.apiKey,
-        mouseData: {
-          distance: Math.round(this.mouseTracker.distance || 0),
-          time: Math.round(this.mouseTracker.time || 0),
-          curves: Math.round(this.mouseTracker.curves || 0),
-        },
-        typingData: {
-          totalChars: this.keyboardTracker.totalChars || 0,
-          totalTime: Math.round(this.keyboardTracker.totalTime || 0),
-          backspaces: this.keyboardTracker.backspaces || 0,
-        },
-        fingerprint: this.getFingerprint(),
-      };
-
-      if (this.config.mode === 'modal') this.showModal('loading');
-
-      try {
-        const res = await fetch(`${API_BASE}/api/challenge`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-
-        if (res.status === 200 && data.token) {
-          if (this.config.mode === 'modal') this.showModal('success');
-          setTimeout(() => {
-            this.hideModal();
-            this.config.onSuccess(data.token);
-            window.BS_TOKEN = data.token;
-          }, 1200);
-        } else if (res.status === 403) {
-          this.hideModal();
-          if (this.config.mode === 'challenge') this.showChallenge();
-          else this.config.onBotDetected();
-        } else {
-          this.hideModal();
-          this.config.onError(data.error || 'Verification failed');
-        }
-      } catch (e) {
-        this.hideModal();
-        this.config.onError("Network error: " + e.message);
-      }
-    },
-
-    showModal: function (state) {
-      let el = document.getElementById('bs-modal');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'bs-modal';
-        el.className = 'bs-overlay';
-        el.setAttribute('role', 'dialog');
-        el.setAttribute('aria-modal', 'true');
-        el.setAttribute('aria-label', 'BotShield verification');
-        el.innerHTML = `
-          <div class="bs-card">
-            <div class="bs-brand"><span class="bs-brand-mark" aria-hidden="true">✓</span> BotShield</div>
-            <div id="bs-content"></div>
-            <div class="bs-footer">Protected by <strong>BotShield</strong> · Secure behavioral verification</div>
-          </div>
-        `;
-        document.body.appendChild(el);
-        requestAnimationFrame(() => el.classList.add('active'));
-      }
-
-      const content = document.getElementById('bs-content');
-      if (state === 'loading') {
-        content.innerHTML = `
-          <div class="bs-spinner"></div>
-          <h3 class="bs-title">Verifying</h3>
-          <p class="bs-text">Analyzing your behavior...</p>
-        `;
-      } else if (state === 'success') {
-        content.innerHTML = `
-          <div style="color:#10B981;font-size:32px;margin-bottom:12px;">✓</div>
-          <h3 class="bs-title">Verified</h3>
-          <p class="bs-text">You're human. Proceeding...</p>
-        `;
-      }
-    },
-
-    showChallenge: function () {
-      let el = document.getElementById('bs-challenge');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'bs-challenge';
-        el.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:999999;';
-        el.innerHTML = `
-          <div class="bs-card" style="padding:16px;max-width:280px;text-align:left;">
-            <h3 class="bs-title" style="font-size:14px;">Security Check</h3>
-            <p class="bs-text" style="font-size:12px;margin-bottom:12px;">Please verify to continue.</p>
-            <button class="bs-btn" id="bs-verify-btn" style="width:100%;">Retry Verification</button>
-          </div>
-        `;
-        document.body.appendChild(el);
-        document.getElementById('bs-verify-btn').onclick = () => {
-          const btn = document.getElementById('bs-verify-btn');
-          btn.disabled = true;
-          btn.innerText = "Verifying...";
-          this.verify();
-        };
-      }
-    },
-
-    hideModal: function () {
-      const el = document.getElementById('bs-modal');
-      if (el) {
-        el.classList.remove('active');
-        setTimeout(() => el.remove(), 300);
-      }
+    getToken: function () { return state.token; },
+    refresh: function () {
+      if (!state.initialized) return Promise.reject(new Error("BotShield is not initialized"));
+      if (state.refreshPromise) return state.refreshPromise;
+      state.refreshPromise = fetch(apiOrigin + "/api/challenge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(telemetry()) })
+        .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
+        .then(function (result) {
+          if (!result.response.ok || !result.data.token) throw new Error(result.data.error || "Challenge request failed");
+          state.token = result.data.token; window.BS_TOKEN = state.token; inject(state.token); showStatus("BotShield ready", true); state.config.onSuccess(state.token, result.data); return state.token;
+        })
+        .catch(function (error) { state.config.onError(error.message); throw error; })
+        .finally(function () { state.refreshPromise = null; });
+      return state.refreshPromise;
     }
   };
 
   window.BotShield = BotShield;
-
-  // The simplest integration is a single script tag. Auto-start it when the
-  // tag includes data-api-key, while still allowing advanced users to call
-  // BotShield.init() manually with callbacks.
-  function autoInit() {
-    const scripts = document.querySelectorAll('script[src*="bot-shield"]');
-    const script = scripts[scripts.length - 1];
-    const apiKey = script && script.getAttribute('data-api-key');
-    if (!apiKey || BotShield.config) return;
-    BotShield.init({
-      apiKey,
-      mode: script.getAttribute('data-mode') || 'modal',
-      onSuccess: function (token) {
-        document.querySelectorAll('form[data-botshield]').forEach(function (form) {
-          let input = form.querySelector('input[name="bot_shield_token"]');
-          if (!input) { input = document.createElement('input'); input.type = 'hidden'; input.name = 'bot_shield_token'; form.appendChild(input); }
-          input.value = token;
-        });
-      }
-    });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoInit);
-  else autoInit();
-})(window);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { BotShield.init(); }); else BotShield.init();
+})(window, document);

@@ -3,136 +3,69 @@ import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { jwtVerify } from "jose";
 import { z } from "zod";
-import { createHash } from "crypto";
+import { createHash, createHmac } from "crypto";
+import { thresholdFor } from "@/lib/bot-type";
 
-const VerifyPayloadSchema = z.object({
-  secretKey: z.string().min(1, "secretKey required"),
-  token: z.string().min(1, "token required"),
-});
+const VerifyPayloadSchema = z.object({ secretKey: z.string().min(1), token: z.string().min(1) });
+const secretHash = (secret: string) => "hash:" + createHmac("sha256", "botshield-key-derivation").update(secret).digest("hex");
+
+async function findProject(secretKey: string) {
+  const hashed = await supabaseAdmin.from("projects").select("*").eq("secret_key", secretHash(secretKey)).maybeSingle();
+  if (hashed.data) return { project: hashed.data, previous: false };
+  const current = await supabaseAdmin.from("projects").select("*").eq("secret_key", secretKey).maybeSingle();
+  if (current.data) return { project: current.data, previous: false };
+  const previous = await supabaseAdmin.from("projects").select("*").eq("previous_secret_key", secretKey).maybeSingle();
+  return previous.data ? { project: previous.data, previous: true } : null;
+}
 
 export async function POST(req: Request) {
+  let payload: z.infer<typeof VerifyPayloadSchema>;
   try {
-    const rawPayload = await req.json();
+    const parsed = VerifyPayloadSchema.safeParse(await req.json());
+    if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    payload = parsed.data;
+  } catch {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
 
-    // Validate payload schema
-    let payload;
-    try {
-      payload = VerifyPayloadSchema.parse(rawPayload);
-    } catch (validationError) {
-      return NextResponse.json(
-        { error: "Invalid payload" },
-        { status: 400 }
-      );
-    }
-
-    const { secretKey, token } = payload;
-
-    // Rate limiting per IP
+  try {
     const h = await headers();
-    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const rateLimitScope = createHash("sha256").update(ip).digest("hex");
-    const { data: rateConfig } = await supabaseAdmin
-      .from("rate_limits")
-      .select("*")
-      .eq("endpoint", "/api/verify")
-      .single();
+    const ip = (h.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+    const scopeKey = createHash("sha256").update(ip).digest("hex");
+    const { data: rawLimit } = await supabaseAdmin.rpc("consume_rate_limit", { p_limit_id: "api_key", p_scope_key: scopeKey }).maybeSingle();
+    const limit = rawLimit as { allowed?: boolean; reset_in_seconds?: number } | null;
+    if (limit && limit.allowed === false) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers: { "Retry-After": String(limit.reset_in_seconds || 60) } });
 
-    const maxAttempts = rateConfig?.max_attempts || 100;
-    const windowSeconds = rateConfig?.window_seconds || 60;
+    const matched = await findProject(payload.secretKey);
+    if (!matched) return NextResponse.json({ error: "Invalid secret key" }, { status: 401 });
+    const { project, previous } = matched;
+    if (!previous && project.secret_key_revoked_at) return NextResponse.json({ error: "Secret key has been revoked" }, { status: 401 });
+    if (previous && (project.previous_secret_key_revoked_at || (project.previous_secret_key_expires_at && new Date(project.previous_secret_key_expires_at).getTime() < Date.now()))) return NextResponse.json({ error: "Previous secret key is no longer valid" }, { status: 401 });
 
-    if (!rateConfig || rateConfig.enabled !== false) {
-      const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
-      const { count } = await supabaseAdmin
-        .from("rate_limit_events")
-        .select("*", { count: "exact", head: true })
-        .eq("limit_id", "verify_ip")
-        .eq("scope_key", rateLimitScope)
-        .gte("created_at", cutoff);
-
-      if ((count || 0) >= maxAttempts) {
-        return NextResponse.json(
-          { error: "Rate limit exceeded" },
-          { status: 429 }
-        );
-      }
-
-      await supabaseAdmin.from("rate_limit_events").insert({
-        limit_id: "verify_ip",
-        scope_key: rateLimitScope,
-      });
-    }
-
-    // Find project by secret key (try hashed first, then plaintext for legacy support)
-    let matchedSecret = secretKey;
-    let matchedKeyType: "current" | "previous" = "current";
-    let { data: project } = await supabaseAdmin
-      .from("projects")
-      .select("*")
-      .eq("secret_key", "hash:" + require("crypto")
-        .createHmac("sha256", "botshield-key-derivation")
-        .update(secretKey)
-      .digest("hex"))
-      .single();
-    if (project) matchedSecret = project.secret_key;
-
-    // Fallback to plaintext secret for migration period
-    if (!project) {
-      const fallback = await supabaseAdmin
-        .from("projects")
-        .select("*")
-        .eq("secret_key", secretKey)
-        .single();
-      project = fallback.data;
-    }
-
-    if (!project) {
-      const previous = await supabaseAdmin.from("projects").select("*").eq("previous_secret_key", secretKey).single();
-      project = previous.data;
-      if (project) matchedKeyType = "previous";
-    }
-
-    if (!project) {
-      return NextResponse.json(
-        { error: "Invalid secret key" },
-        { status: 401 }
-      );
-    }
-    if (matchedKeyType === "current" && project.secret_key_revoked_at) return NextResponse.json({ error: "Secret key has been revoked" }, { status: 401 });
-    if (matchedKeyType === "previous" && (project.previous_secret_key_revoked_at || (project.previous_secret_key_expires_at && new Date(project.previous_secret_key_expires_at).getTime() < Date.now()))) return NextResponse.json({ error: "Previous secret key is no longer valid" }, { status: 401 });
-
-    // Verify JWT using derived key
+    let jwtPayload;
     try {
-      const jwtSecret = new TextEncoder().encode(matchedSecret);
-      const { payload: jwtPayload } = await jwtVerify(token, jwtSecret, {
-        issuer: "botshield",
-        audience: project.id,
-        algorithms: ["HS256"],
-      });
-
-      if (jwtPayload.purpose !== "bot_verification") {
-        return NextResponse.json(
-          { error: "Invalid token purpose" },
-          { status: 401 }
-        );
-      }
-
-      const score = jwtPayload.score as number;
-      return NextResponse.json({
-        status: score < 50 ? "human" : "suspicious",
-        payload: { projectId: jwtPayload.aud, score },
-      });
-    } catch (jwtErr) {
-      console.warn("[BotShield] JWT verification failed (expected for invalid tokens)");
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
+      ({ payload: jwtPayload } = await jwtVerify(payload.token, new TextEncoder().encode(project.secret_key), { issuer: "botshield", audience: project.id, algorithms: ["HS256"] }));
+    } catch {
+      return NextResponse.json({ status: "blocked", score: 100, reason: "bad_token" });
     }
-  } catch (err) {
-    console.error("[BotShield] Verify error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    if (jwtPayload.purpose !== "bot_verification" || typeof jwtPayload.jti !== "string") return NextResponse.json({ status: "blocked", score: 100, reason: "invalid_token" });
+
+    const { data: challenge, error: challengeError } = await supabaseAdmin.from("challenge_tokens").select("jti,project_id,score,used_at,expires_at").eq("jti", jwtPayload.jti).eq("project_id", project.id).maybeSingle();
+    if (challengeError) throw challengeError;
+    if (!challenge || challenge.used_at || new Date(challenge.expires_at).getTime() <= Date.now()) return NextResponse.json({ status: "blocked", score: 100, reason: "replay_or_expired" });
+    const { data: claimed, error: claimError } = await supabaseAdmin.from("challenge_tokens").update({ used_at: new Date().toISOString() }).eq("jti", challenge.jti).is("used_at", null).select("jti").maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) return NextResponse.json({ status: "blocked", score: 100, reason: "replay" });
+
+    const score = Number(challenge.score);
+    const threshold = thresholdFor(project.sensitivity);
+    const status = score >= threshold ? "blocked" : "human";
+    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, status, bot_type: status === "blocked" ? "suspicious" : "human", mode: project.mode || "active", ip_hash: scopeKey, country: (h.get("x-vercel-ip-country") || "unknown").toLowerCase(), ip_address: ip });
+    await supabaseAdmin.rpc("increment_request_metrics", { was_blocked: status === "blocked" });
+    return NextResponse.json({ status, score });
+  } catch (error) {
+    console.error("[BotShield] Verify degraded", error);
+    // Availability policy: do not lock out a customer when our control plane is unavailable.
+    return NextResponse.json({ status: "human", degraded: true });
   }
 }
