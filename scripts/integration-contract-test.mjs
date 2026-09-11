@@ -47,7 +47,7 @@ assert.match(migration, /cleanup_botshield_security_data/);
 assert.match(migration, /risk_reasons/);
 assert.match(liveTest, /replayed token was not blocked/);
 assert.match(featureCatalog, /export const SECURITY_FEATURES/);
-assert.equal((featureCatalog.match(/key: "/g) || []).length, 20, "security feature catalog must contain 20 features");
+assert.equal((featureCatalog.match(/key: "/g) || []).length, 50, "security feature catalog must contain 50 features");
 assert.match(featureApi, /project_feature_flags/);
 assert.match(settingsApi, /fail_open/);
 assert.match(settingsApi, /telemetry_retention_days/);

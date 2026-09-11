@@ -19,6 +19,7 @@ Add these variables in **Vercel → Project Settings → Environment Variables**
 | `BASE_URL` | Preview/tests | Server only | URL used by smoke tests, usually the deployed preview URL |
 | `SMOKE_API_KEY` | Tests only | Server only | A dedicated non-production project public key |
 | `SMOKE_SECRET_KEY` | Tests only | Server only | The matching dedicated non-production secret key |
+| `SMOKE_ALLOWED_ORIGIN` | Tests only | Server only | Exact origin allowed for the staging smoke project |
 | `BOTSHIELD_FAIL_OPEN` | Optional | Server only | Default outage posture: `true` keeps users flowing during internal outages; `false` returns `503` when verification infrastructure is unavailable |
 
 ## Recommended values by environment
@@ -39,6 +40,17 @@ Add these variables in **Vercel → Project Settings → Environment Variables**
 6. **Paystack keys:** create or open a Paystack account, use **Settings → API Keys & Webhooks**, and copy the public key into `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` and the secret key into `PAYSTACK_SECRET_KEY`. Use test keys for Preview and Development; use live keys only for Production.
 7. **Paystack webhook:** in the same Paystack screen, add `https://YOUR-VERCEL-DOMAIN/api/webhooks/paystack` as the webhook URL. Send a test event and check Vercel Runtime Logs for a successful response.
 8. **Smoke-test keys:** create a separate non-production BotShield project, copy its public key into `SMOKE_API_KEY` and secret key into `SMOKE_SECRET_KEY`, and set `BASE_URL` to the staging/preview URL. Never use a production secret in automated tests.
+
+## Getting smoke keys
+
+1. Sign in to the BotShield dashboard and create a project named something like `staging-smoke`.
+2. Set its allowed origin to the staging URL used by the smoke workflow, for example `https://staging.example.com`.
+3. Open that project’s SDK/API panel. Copy the public `bs_live_...` key into the GitHub Actions secret `SMOKE_API_KEY`.
+4. Copy the matching server-only `bs_sec_...` secret into the GitHub Actions secret `SMOKE_SECRET_KEY`. Never put this value in HTML, browser JavaScript, an issue, or a repository file.
+5. Set `SMOKE_ALLOWED_ORIGIN` to the exact staging origin and set `BASE_URL` to the deployed staging URL.
+6. Run the workflow. The live security harness checks a realistic human, a high-risk bot, replay protection, and origin rejection. Set `RUN_RATE_LIMIT=true` only when you intentionally want the additional rate-limit test.
+
+If the dashboard does not yet display the secret key, use the project creation response or the one-time rotation response immediately and save the value in the secret manager. Secrets are intentionally not recoverable after they are hidden.
 
 ## Add them in Vercel
 
