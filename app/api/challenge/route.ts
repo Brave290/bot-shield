@@ -160,11 +160,12 @@ export async function POST(req: Request) {
     const windowSeconds = rateConfig?.window_seconds || 60;
 
     const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
+    const rateLimitScope = createHash("sha256").update(apiKey).digest("hex");
     const { count, error: countErr } = await supabaseAdmin
       .from("rate_limit_events")
       .select("*", { count: "exact", head: true })
       .eq("limit_id", "api_key")
-      .eq("scope_key", apiKey)
+      .eq("scope_key", rateLimitScope)
       .gte("created_at", cutoff);
 
     if (countErr) {
@@ -188,7 +189,7 @@ export async function POST(req: Request) {
     // Record rate limit event
     await supabaseAdmin.from("rate_limit_events").insert({
       limit_id: "api_key",
-      scope_key: apiKey,
+      scope_key: rateLimitScope,
     });
 
     // Calculate bot score
