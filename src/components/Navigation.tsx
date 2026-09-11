@@ -23,6 +23,8 @@ menu }: { menu?: { label: string; href: string }[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [highContrast, setHighContrast] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -30,13 +32,18 @@ menu }: { menu?: { label: string; href: string }[] }) {
     const stored = localStorage.getItem("theme") as "dark" | "light" | null;
     if (stored) setTheme(stored);
     else if (window.matchMedia("(prefers-color-scheme: light)").matches) setTheme("light");
-    return () => window.removeEventListener("scroll", onScroll);
+    setHighContrast(localStorage.getItem("high-contrast") === "true");
+    const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") setSearchOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("keydown", onKey); };
   }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");
+    document.documentElement.classList.toggle("high-contrast", highContrast);
     localStorage.setItem("theme", theme);
-  }, [theme]);
+    localStorage.setItem("high-contrast", String(highContrast));
+  }, [theme, highContrast]);
 
   const isAdmin = (pathname || "").startsWith("/admin");
   const links = isAdmin ? [
@@ -68,7 +75,7 @@ menu }: { menu?: { label: string; href: string }[] }) {
         </nav>
         <div className="flex items-center gap-3">
           {/* Search - now visible on mobile */}
-          <button onClick={() => setSearchOpen(!searchOpen)} aria-label="Toggle search" className="w-10 h-10 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors">
+          <button onClick={() => setSearchOpen(!searchOpen)} aria-label="Open command palette" className="w-10 h-10 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors">
             <Icons.Search />
           </button>
           {/* Theme toggle */}
@@ -91,19 +98,20 @@ menu }: { menu?: { label: string; href: string }[] }) {
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
               <div className="relative">
                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500"><Icons.Search className="w-6 h-6" /></span>
-                <input autoFocus type="search" placeholder="Search documentation, guides, endpoints..." className="w-full bg-slate-900 border-2 border-blue-500/50 rounded-2xl pl-16 pr-6 py-6 text-lg text-white placeholder-slate-500 focus:outline-none" />
+                <input autoFocus type="search" value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="Search pages and actions…  ⌘K" className="w-full bg-slate-900 border-2 border-blue-500/50 rounded-2xl pl-16 pr-6 py-6 text-lg text-white placeholder-slate-500 focus:outline-none" />
                 <button onClick={() => setSearchOpen(false)} className="absolute right-4 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-400 font-medium">ESC</button>
               </div>
               <div className="mt-6 p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
                 <p className="text-sm text-slate-500 mb-4">Quick links</p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {links.map((l) => (
+                  {links.filter((l) => `${l.label} ${l.href}`.toLowerCase().includes(commandQuery.toLowerCase())).map((l) => (
                     <Link key={l.href} href={l.href} onClick={() => setSearchOpen(false)} className="flex items-center gap-3 p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500/40 transition-colors group">
                       <Icons.ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
                       <span className="text-sm text-slate-300 group-hover:text-white">{l.label}</span>
                     </Link>
                   ))}
                 </div>
+                <button onClick={() => setHighContrast((value) => !value)} className="mt-4 w-full rounded-xl border border-slate-800 px-4 py-3 text-left text-sm text-slate-300 hover:border-blue-500/50">{highContrast ? "Disable" : "Enable"} high-contrast mode</button>
               </div>
             </motion.div>
           </motion.div>
