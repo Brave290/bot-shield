@@ -44,6 +44,8 @@ export async function GET(req: Request) {
   }
   if (type === "admins") { const { data } = await supabaseAdmin.from("admins").select("*").order("created_at"); return NextResponse.json(data || []); }
   if (type === "audit") { const { data } = await supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50); return NextResponse.json(data || []); }
+  if (type === "billing_events") { const { data } = await supabaseAdmin.from("billing_events").select("id,event_id,event_type,provider,created_at,payload").order("created_at", { ascending: false }).limit(100); return NextResponse.json(data || []); }
+  if (type === "abuse") { const { data } = await supabaseAdmin.from("verification_logs").select("id,project_id,score,bot_type,status,mode,ip_hash,country,created_at").eq("status", "blocked").order("created_at", { ascending: false }).limit(100); return NextResponse.json(data || []); }
   if (type === "rate_limits") {
     const { data } = await supabaseAdmin.from("rate_limits").select("*");
     return NextResponse.json(data || []);

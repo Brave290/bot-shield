@@ -14,13 +14,13 @@ import { CustomSelect } from "@/components/custom-select";
 import { AdminFeatureLab } from "@/components/admin-feature-lab";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms" | "features";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms" | "features" | "billing" | "abuse";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "overview";
     const value = new URLSearchParams(window.location.search).get("tab") as Tab | null;
-    return value && ["overview", "messages", "applications", "pricing", "users", "rules", "admins", "audit", "cron", "cms", "features"].includes(value) ? value : "overview";
+    return value && ["overview", "messages", "applications", "pricing", "users", "rules", "admins", "audit", "cron", "cms", "features", "billing", "abuse"].includes(value) ? value : "overview";
   });
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   const [me, setMe] = useState<any>(null);
@@ -35,6 +35,8 @@ export default function Admin() {
   const [myIp, setMyIp] = useState("");
   const [stats, setStats] = useState<any>({});
   const [cmsPages, setCmsPages] = useState<any[]>([]);
+  const [billingEvents, setBillingEvents] = useState<any[]>([]);
+  const [abuseEvents, setAbuseEvents] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState("");
   const [transferTo, setTransferTo] = useState("");
 
@@ -58,11 +60,11 @@ export default function Admin() {
     };
     const m = await get("messages");
     if (m.status === 403) { setState("denied"); return; }
-    const [a, p, us, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("users"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/cron", { headers: h })]);
-    const [messagesData, appsData, pricingData, usersData, adminsData, auditData, projectsData, meData, cronData, statsData] = await Promise.all([
-      readArray(m), readArray(a), readArray(p), readArray(us), readArray(ad), readArray(au), readArray(pr), meRes.json().catch(() => null), pn.json().catch(() => null), st.json().catch(() => null),
+    const [a, p, us, ad, st, au, pr, meRes, pn, be, ab] = await Promise.all([get("applications"), get("pricing"), get("users"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/cron", { headers: h }), get("billing_events"), get("abuse")]);
+    const [messagesData, appsData, pricingData, usersData, adminsData, auditData, projectsData, meData, cronData, statsData, billingData, abuseData] = await Promise.all([
+      readArray(m), readArray(a), readArray(p), readArray(us), readArray(ad), readArray(au), readArray(pr), meRes.json().catch(() => null), pn.json().catch(() => null), st.json().catch(() => null), readArray(be), readArray(ab),
     ]);
-    setMessages(messagesData); setApps(appsData); setPricing(pricingData); setUsers(usersData); setAdmins(adminsData); setStats(statsData && !Array.isArray(statsData) ? statsData : {}); setAudit(auditData); setProjects(projectsData); setMe(meData && !Array.isArray(meData) ? meData : null); setCronRuns(Array.isArray(cronData) ? cronData : []);
+    setMessages(messagesData); setApps(appsData); setPricing(pricingData); setUsers(usersData); setAdmins(adminsData); setStats(statsData && !Array.isArray(statsData) ? statsData : {}); setAudit(auditData); setProjects(projectsData); setMe(meData && !Array.isArray(meData) ? meData : null); setCronRuns(Array.isArray(cronData) ? cronData : []); setBillingEvents(billingData); setAbuseEvents(abuseData);
     setState("ready");
   }, [headers]);
 
@@ -130,7 +132,7 @@ export default function Admin() {
         <div className="hidden border-b border-slate-800/80 px-3 pb-6 lg:block"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><Icons.Shield className="h-5 w-5" /></span><div><p className="font-serif text-xl font-bold text-white">BotShield</p><p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Control plane</p></div></div></div>
         <nav className="flex items-center justify-around gap-1 lg:mt-6 lg:block lg:space-y-7">
           <div className="lg:space-y-1"><p className="mb-2 hidden px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600 lg:block">Workspace</p>{[["overview", "Overview", "chart"], ["users", "Users", "users"], ["rules", "Project rules", "shield"], ["pricing", "Pricing", "file"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium transition lg:flex-row lg:gap-3 lg:py-3 lg:text-sm ${tab === id ? "bg-blue-600/15 text-blue-300 ring-1 ring-blue-500/30" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
-          <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operations</p>{[["messages", "Messages", "mail"], ["applications", "Applications", "file"], ["rules", "Security rules", "shield"], ["audit", "Audit log", "file"], ["cron", "Cron jobs", "activity"], ["admins", "Administrators", "users"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${tab === id ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
+          <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operations</p>{[["messages", "Messages", "mail"], ["applications", "Applications", "file"], ["billing", "Billing events", "chart"], ["abuse", "Abuse queue", "activity"], ["rules", "Security rules", "shield"], ["audit", "Audit log", "file"], ["cron", "Cron jobs", "activity"], ["admins", "Administrators", "users"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${tab === id ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
           <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Tools</p><button onClick={() => changeTab("features")} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${tab === "features" ? "bg-violet-500/15 text-violet-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name="chart" className="h-4 w-4" />Feature lab</button><button onClick={() => changeTab("cms")} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${tab === "cms" ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name="book" className="h-4 w-4" />Content CMS</button><a href="/admin/rate-limits" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="zap" className="h-4 w-4" />Rate limits</a><a href="/admin/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="settings" className="h-4 w-4" />Settings</a><a href="/dashboard/analytics" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="trending" className="h-4 w-4" />Analytics</a><a href="/test" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="flask" className="h-4 w-4" />Playground</a><a href="/docs" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="book" className="h-4 w-4" />Docs</a></div>
         </nav>
       </aside>
@@ -158,6 +160,10 @@ export default function Admin() {
           )}
 
           {tab === "features" && <AdminFeatureLab onJump={changeTab} />}
+
+          {tab === "billing" && <div className="space-y-4"><div><h2 className="font-serif text-3xl font-bold text-white">Billing events</h2><p className="mt-2 text-sm text-slate-500">Paystack webhook history and subscription-state changes.</p></div>{billingEvents.length === 0 ? <p className="text-sm text-slate-500">No billing events recorded yet.</p> : billingEvents.map((event) => <div key={event.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium text-white">{event.event_type}</p><p className="mt-1 font-mono text-xs text-slate-600">{event.event_id}</p></div><time className="text-xs text-slate-500">{new Date(event.created_at).toLocaleString()}</time></div></div>)}</div>}
+
+          {tab === "abuse" && <div className="space-y-4"><div><h2 className="font-serif text-3xl font-bold text-white">Abuse review queue</h2><p className="mt-2 text-sm text-slate-500">Recent blocked verification events for investigation and false-positive review.</p></div>{abuseEvents.length === 0 ? <p className="text-sm text-slate-500">No blocked events recorded yet.</p> : abuseEvents.map((event) => <div key={event.id} className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium text-white">{event.bot_type} · score {event.score}</p><p className="mt-1 text-xs text-slate-500">Project {event.project_id} · {event.country || "unknown"} · {event.mode}</p></div><time className="text-xs text-slate-500">{new Date(event.created_at).toLocaleString()}</time></div></div>)}</div>}
 
           {tab === "messages" && (
             <div className="space-y-4">

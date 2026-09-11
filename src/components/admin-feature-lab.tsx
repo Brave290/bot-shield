@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { Icon } from "@/components/icons";
 
-type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms" | "features";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms" | "features" | "billing" | "abuse";
 type Feature = [string, string, "Live" | "Next", string, Tab?];
 const FEATURES: Feature[] = [
   ["User directory", "Search, inspect, assign plans, and permanently remove accounts.", "Live", "users", "users"],
@@ -14,13 +14,13 @@ const FEATURES: Feature[] = [
   ["Rate-limit center", "Tune abuse controls by endpoint and request scope.", "Live", "zap"],
   ["Platform settings", "Manage maintenance mode and notification configuration.", "Live", "settings"],
   ["Analytics workspace", "Monitor traffic, requests, conversion, and bot pressure.", "Live", "trending"],
-  ["Billing event monitor", "Track successful, duplicate, failed, and pending payments.", "Next", "chart"],
+  ["Billing event monitor", "Track successful, duplicate, failed, and pending payments.", "Live", "chart", "billing"],
   ["Team access", "Invite members, accept invitations, and assign project roles.", "Live", "users"],
   ["Key rotation center", "Rotate, expire, and revoke project secrets with migration protection.", "Live", "shield"],
   ["Origin policy manager", "Review and approve customer website origins.", "Next", "shield"],
   ["Webhook monitor", "Inspect delivery health and replay failed callbacks.", "Next", "activity"],
   ["Email delivery", "Test, monitor, and troubleshoot transactional email.", "Next", "mail"],
-  ["Abuse review queue", "Triage suspicious traffic, fingerprints, and false positives.", "Next", "activity"],
+  ["Abuse review queue", "Review blocked verification events, fingerprints, and false positives.", "Live", "activity", "abuse"],
   ["Feature flags", "Release platform features progressively by plan or cohort.", "Next", "settings"],
   ["Data export center", "Export users, logs, billing, and audit data safely.", "Next", "file"],
   ["Incident center", "Record outages, mitigations, and customer-impact timelines.", "Next", "activity"],
