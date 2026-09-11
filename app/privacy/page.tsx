@@ -1,24 +1,21 @@
-"use client";
 import { Navigation } from "@/components/Navigation";
 import { Footer, PageHero } from "@/components/site";
-const S = ({ t, b }: { t: string; b: string }) => (<section className="mb-8"><h2 className="font-serif text-2xl font-semibold text-white mb-3">{t}</h2><p className="text-slate-400 font-light leading-relaxed">{b}</p></section>);
+
+const sections = [
+  ["1. Scope and role", "This notice describes BotShield’s default processing when a customer embeds the BotShield widget or calls the BotShield API. The customer using BotShield remains responsible for giving visitors any notices required for its own website, deciding its lawful basis, configuring retention, and responding to visitor requests."],
+  ["2. Information processed", "BotShield processes account information, project configuration, API usage metadata, hashed network identifiers, request timestamps, origin information, device capability signals, coarse network hints, and behavioral aggregates such as pointer distance, duration, curve count, typing counts, typing duration, focus, scroll, and automation indicators. The widget is designed not to collect keystroke content, passwords, form values, page content, or raw IP addresses."],
+  ["3. Sensitive inputs we avoid", "Do not send names, email addresses, passwords, payment data, health data, government identifiers, or free-form user content as telemetry. Fingerprints should be generated from limited browser capability values and should not be used as a universal identity across unrelated services."],
+  ["4. Purpose and decisions", "Telemetry is used to calculate a bot-risk score, protect customer endpoints, support rate limiting, prevent token replay, diagnose abuse, and provide aggregate security analytics. A challenge token is not an approval. The customer’s backend must make the final allow or deny decision from the server-side verification response."],
+  ["5. Privacy controls", "Projects can use minimal, standard, or strict privacy mode, configure retention from 30 to 730 days, require customer-managed consent, and choose an accessibility review path for borderline traffic. Strict mode should be used when a customer wants the smallest telemetry footprint compatible with its security needs."],
+  ["6. Retention and deletion", "Security telemetry is retained according to the project setting and is eligible for automated deletion after that period. Short-lived challenge tokens expire after five minutes and replay records are cleaned up. Customers may request deletion of account or project data through the contact address below, subject to security, billing, fraud-prevention, and legal retention requirements."],
+  ["7. Service providers", "The default product uses the customer’s configured BotShield application, database, authentication, hosting, and email infrastructure. Optional webhooks send only the event payload selected by the customer to the HTTPS endpoint that the customer configures. BotShield does not silently send telemetry to advertising networks, data brokers, or third-party reputation providers. Any future optional provider must be enabled explicitly, documented here, and covered by an appropriate processing agreement where required."],
+  ["8. Security and fail-open behavior", "Tokens are short-lived and single-use, secrets are intended to remain server-side, and IP addresses used for analytics are hashed before storage. By default, an internal BotShield infrastructure failure returns a degraded result rather than locking out a customer’s users. Customers may choose a stricter fail-closed posture only after assessing availability and accessibility impacts; invalid, expired, replayed, or clearly blocked tokens are not treated as infrastructure failures."],
+  ["9. International transfers", "Hosting, authentication, email, or customer-configured webhook providers may process data in countries different from the visitor’s country. Customers should review their provider configuration, transfer mechanisms, and visitor notices before enabling cross-border processing."],
+  ["10. Rights and contact", "For privacy questions, access, correction, or deletion requests, contact info.bravehx@gmail.com. Requests may require account or project verification so that one customer cannot obtain another customer’s security data. We will update this notice when our processing or optional providers materially change."],
+  ["11. Children", "BotShield is not directed to children. Customers must not use BotShield telemetry as a substitute for age assurance or parental-consent obligations."],
+  ["12. Effective date", "Last updated September 2026. This document is an operational product disclosure, not legal advice; customers should obtain advice appropriate to their jurisdiction and use case."],
+] as const;
+
 export default function Privacy() {
-  return (<>
-    <Navigation />
-    <main><PageHero eyebrow="Legal" title="Privacy," italic="respected." subtitle="What we collect, what we refuse to collect, and why. Last updated August 2026." />
-      <div className="max-w-3xl mx-auto px-6 pb-28">
-        <S t="1. What we collect" b="Account email, project settings, and hashed visitor identifiers (SHA-256). Contact messages and job applications you voluntarily send us. That is the whole list." />
-        <S t="2. What we never collect" b="Raw IP addresses of your end users, keystroke content, form contents, or anything typed into protected pages. The widget measures rhythm, not data." />
-        <S t="3. Hashing & storage" b="Visitor IPs are hashed at the API layer before storage. A hash cannot be reversed to an IP without brute force, and we salt per deployment." />
-        <S t="4. Cookies" b="The detection widget sets no tracking cookies. This site stores only a theme preference and session storage for analytics." />
-        <S t="5. Retention" b="Verification logs are retained per your plan (7 to 90 days) then deleted. Contact messages and applications are kept until you ask us to remove them." />
-        <S t="6. Subprocessors" b="We rely on Supabase (database & auth), Vercel (hosting & edge), and Resend (transactional email), each with their own compliant processing agreements." />
-        <S t="7. Your rights" b="Email info.bravehx@gmail.com to access, correct, or erase personal data. We respond within 30 days, usually much faster." />
-        <S t="8. Children" b="The service is not directed to children under 13 and we do not knowingly collect their data." />
-        <S t="9. Changes" b="When we change this policy we update the date above and, for material changes, notify account owners by email." />
-        <S t="10. Contact" b="Privacy questions: info.bravehx@gmail.com · BraveHX Studio, a subsidiary of Brave HX Technology." />
-      </div>
-    </main>
-    <Footer />
-  </>);
+  return <><Navigation /><main><PageHero eyebrow="Legal" title="Privacy," italic="by design." subtitle="A transparent description of BotShield’s default processing, controls, and optional integrations. Last updated September 2026." /><div className="mx-auto max-w-3xl px-6 pb-28">{sections.map(([title, body]) => <section key={title} className="mb-8"><h2 className="mb-3 font-serif text-2xl font-semibold text-white">{title}</h2><p className="font-light leading-relaxed text-slate-400">{body}</p></section>)}</div></main><Footer /></>;
 }

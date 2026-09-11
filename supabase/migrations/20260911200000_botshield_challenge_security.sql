@@ -2,7 +2,24 @@
 ALTER TABLE public.projects
   ADD COLUMN IF NOT EXISTS allowed_ips TEXT[] NOT NULL DEFAULT '{}',
   ADD COLUMN IF NOT EXISTS blocked_ips TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'active' CHECK (mode IN ('active', 'shadow'));
+  ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'active' CHECK (mode IN ('active', 'shadow')),
+  ADD COLUMN IF NOT EXISTS fail_open BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS privacy_mode TEXT NOT NULL DEFAULT 'minimal' CHECK (privacy_mode IN ('minimal', 'standard', 'strict')),
+  ADD COLUMN IF NOT EXISTS consent_required BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS telemetry_retention_days INTEGER NOT NULL DEFAULT 90 CHECK (telemetry_retention_days BETWEEN 30 AND 730),
+  ADD COLUMN IF NOT EXISTS risk_provider TEXT NOT NULL DEFAULT 'none' CHECK (risk_provider IN ('none', 'webhook')),
+  ADD COLUMN IF NOT EXISTS accessibility_mode TEXT NOT NULL DEFAULT 'review' CHECK (accessibility_mode IN ('review', 'challenge', 'allow'));
+
+CREATE TABLE IF NOT EXISTS public.project_feature_flags (
+  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  feature_key TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (project_id, feature_key)
+);
+ALTER TABLE public.project_feature_flags ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.project_feature_flags FROM anon, authenticated;
 
 ALTER TABLE public.verification_logs
   ADD COLUMN IF NOT EXISTS score INTEGER,

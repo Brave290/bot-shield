@@ -41,11 +41,12 @@ export async function POST(req: Request) {
     const payload = parsed.data;
     const { data: project, error: projectError } = await supabaseAdmin
       .from("projects")
-      .select("id,user_id,api_key,secret_key,allowed_origins,allowed_ips,blocked_ips,mode,sensitivity")
+      .select("id,user_id,api_key,secret_key,allowed_origins,allowed_ips,blocked_ips,mode,sensitivity,privacy_mode,consent_required")
       .eq("api_key", payload.apiKey)
       .single();
     if (projectError || !project) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     if (!originAllowed(req.headers.get("origin"), project.allowed_origins || [])) return NextResponse.json({ error: "origin_not_allowed" }, { status: 403 });
+    if (project.consent_required && req.headers.get("x-botshield-consent") !== "granted") return NextResponse.json({ error: "consent_required" }, { status: 428 });
 
     const ip = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
     const ipHash = createHash("sha256").update(ip).digest("hex");
@@ -76,12 +77,13 @@ export async function POST(req: Request) {
     const reasons = decisionReasons(payload, score, botType);
     const jti = randomUUID();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-    const token = await new SignJWT({ projectId: project.id, score, fingerprint: payload.fingerprint || null, jti, iss: "botshield", aud: project.id, purpose: "bot_verification" })
+    const storedFingerprint = project.privacy_mode === "strict" ? null : (payload.fingerprint || null);
+    const token = await new SignJWT({ projectId: project.id, score, fingerprint: storedFingerprint, jti, iss: "botshield", aud: project.id, purpose: "bot_verification" })
       .setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("5m").sign(new TextEncoder().encode(project.secret_key));
-    const { error: tokenError } = await supabaseAdmin.from("challenge_tokens").insert({ jti, project_id: project.id, score, fingerprint: payload.fingerprint || null, expires_at: expiresAt });
+    const { error: tokenError } = await supabaseAdmin.from("challenge_tokens").insert({ jti, project_id: project.id, score, fingerprint: storedFingerprint, expires_at: expiresAt });
     if (tokenError) throw tokenError;
 
-    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: "issued", mode: project.mode || "active", ip_hash: ipHash, country: (req.headers.get("x-vercel-ip-country") || "unknown").toLowerCase(), browser_fingerprint: payload.fingerprint || null, ip_address: ip, request_id: requestId, risk_reasons: reasons });
+    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: "issued", mode: project.mode || "active", ip_hash: ipHash, country: (req.headers.get("x-vercel-ip-country") || "unknown").toLowerCase(), browser_fingerprint: storedFingerprint, ip_address: ip, request_id: requestId, risk_reasons: reasons });
     const response = NextResponse.json({ token, score, botType, reasons, mode: project.mode || "active", requestId });
     response.headers.set("X-BotShield-Request-Id", requestId);
     return response;

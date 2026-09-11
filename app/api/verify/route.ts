@@ -19,6 +19,7 @@ async function findProject(secretKey: string) {
 }
 
 export async function POST(req: Request) {
+  let projectFailOpen = process.env.BOTSHIELD_FAIL_OPEN !== "false";
   let payload: z.infer<typeof VerifyPayloadSchema>;
   try {
     const parsed = VerifyPayloadSchema.safeParse(await req.json());
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
     const matched = await findProject(payload.secretKey);
     if (!matched) return NextResponse.json({ error: "Invalid secret key" }, { status: 401 });
     const { project, previous } = matched;
+    projectFailOpen = project.fail_open !== false;
     if (!previous && project.secret_key_revoked_at) return NextResponse.json({ error: "Secret key has been revoked" }, { status: 401 });
     if (previous && (project.previous_secret_key_revoked_at || (project.previous_secret_key_expires_at && new Date(project.previous_secret_key_expires_at).getTime() < Date.now()))) return NextResponse.json({ error: "Previous secret key is no longer valid" }, { status: 401 });
 
@@ -68,7 +70,8 @@ export async function POST(req: Request) {
     return response;
   } catch (error) {
     console.error("[BotShield] Verify degraded", error);
-    // Availability policy: do not lock out a customer when our control plane is unavailable.
-    return NextResponse.json({ status: "human", degraded: true });
+    // Availability policy is explicit: customers may opt into fail-closed behavior.
+    if (projectFailOpen) return NextResponse.json({ status: "human", degraded: true });
+    return NextResponse.json({ status: "unavailable", degraded: true }, { status: 503 });
   }
 }

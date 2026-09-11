@@ -22,4 +22,4 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run test:integration
       - run: node --check public/bot-shield.js
-      - run: npx eslint app/api/challenge/route.ts app/api/verify/route.ts app/api-reference/page.tsx app/dashboard/security/page.tsx src/components/dashboard/sdk-view.tsx src/lib/scoring-engine.ts scripts/integration-contract-test.mjs scripts/live-security-test.mjs
+      - run: npx eslint app/api/challenge/route.ts app/api/verify/route.ts app/api/security-features/route.ts app/api/projects/security-settings/route.ts app/api-reference/page.tsx app/privacy/page.tsx app/dashboard/security/page.tsx src/components/dashboard/sdk-view.tsx src/lib/scoring-engine.ts src/lib/security-features.ts scripts/integration-contract-test.mjs scripts/live-security-test.mjs

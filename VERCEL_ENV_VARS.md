@@ -19,6 +19,7 @@ Add these variables in **Vercel → Project Settings → Environment Variables**
 | `BASE_URL` | Preview/tests | Server only | URL used by smoke tests, usually the deployed preview URL |
 | `SMOKE_API_KEY` | Tests only | Server only | A dedicated non-production project public key |
 | `SMOKE_SECRET_KEY` | Tests only | Server only | The matching dedicated non-production secret key |
+| `BOTSHIELD_FAIL_OPEN` | Optional | Server only | Default outage posture: `true` keeps users flowing during internal outages; `false` returns `503` when verification infrastructure is unavailable |
 
 ## Recommended values by environment
 
@@ -44,6 +45,8 @@ Add these variables in **Vercel → Project Settings → Environment Variables**
 Open **Vercel → your BotShield project → Settings → Environment Variables → Add New**. Enter the variable name exactly, paste the value, select the target environment, and save. Add all server secrets to **Production** and **Preview** separately with different values. After saving, go to **Deployments**, open the latest deployment, choose **Redeploy**, and enable **Use existing Build Cache** only if you did not change public variables; otherwise redeploy without the cache.
 
 After deployment, verify `/api/stats/realtime`, the homepage live simulation, login, project creation, and the Paystack webhook test. Never test by printing secret values in browser code or committing a filled `.env` file.
+
+Project-level privacy, consent, retention, accessibility, provider, and fail-open settings are managed through the authenticated `/api/projects/security-settings` endpoint. The default provider is `none`; selecting `webhook` only enables the customer-configured HTTPS webhook path. BotShield does not silently activate third-party reputation, advertising, or data-broker services.
 
 ## Generate random secrets
 

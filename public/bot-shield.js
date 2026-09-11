@@ -9,7 +9,7 @@
     return /bot-shield\.js(?:$|\?)/i.test(node.src);
   });
   var apiOrigin = script && script.src ? new URL(script.src, window.location.href).origin : window.location.origin;
-  var state = { token: null, initialized: false, startedAt: Date.now(), refreshPromise: null };
+  var state = { token: null, initialized: false, consent: false, startedAt: Date.now(), refreshPromise: null };
   var mouse = { distance: 0, time: 0, curves: 0, lastX: null, lastY: null };
   var typing = { totalChars: 0, totalTime: 0, backspaces: 0, firstAt: null };
   var focusEvents = 0;
@@ -20,7 +20,7 @@
       apiKey: script && script.getAttribute("data-api-key"),
       mode: (script && script.getAttribute("data-mode")) || "invisible",
       delay: Math.max(4000, Number((script && script.getAttribute("data-delay")) || 4000)),
-      onSuccess: function () {}, onBotDetected: function () {}, onError: function () {}
+      consent: false, onSuccess: function () {}, onBotDetected: function () {}, onError: function () {}
     };
   }
 
@@ -80,16 +80,20 @@
     init: function (userConfig) {
       if (state.initialized) return this;
       state.config = Object.assign(configFromScript(), userConfig || {});
+      state.consent = state.config.consent === true;
       if (!state.config.apiKey) { state.config.onError("Missing data-api-key"); return this; }
       state.initialized = true; this.config = state.config; track();
       window.setTimeout(function () { BotShield.refresh(); }, state.config.delay);
       return this;
     },
     getToken: function () { return state.token; },
+    setConsent: function (granted) { state.consent = granted === true; return this; },
     refresh: function () {
       if (!state.initialized) return Promise.reject(new Error("BotShield is not initialized"));
       if (state.refreshPromise) return state.refreshPromise;
-      state.refreshPromise = fetch(apiOrigin + "/api/challenge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(telemetry()) })
+      var headers = { "Content-Type": "application/json" };
+      if (state.consent) headers["X-BotShield-Consent"] = "granted";
+      state.refreshPromise = fetch(apiOrigin + "/api/challenge", { method: "POST", headers: headers, body: JSON.stringify(telemetry()) })
         .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
         .then(function (result) {
           if (!result.response.ok || !result.data.token) throw new Error(result.data.error || "Challenge request failed");
