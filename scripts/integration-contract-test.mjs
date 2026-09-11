@@ -10,6 +10,9 @@ const docs = read("app/api-reference/page.tsx");
 const billing = read("app/api/billing/initialize/route.ts");
 const team = read("app/api/team/invite/route.ts");
 const rotation = read("app/api/projects/rotate-secret/route.ts");
+const quota = read("app/api/challenge/route.ts");
+const accept = read("app/api/team/accept/route.ts");
+const revoke = read("app/api/projects/revoke-secret/route.ts");
 const admin = read("app/api/admin/data/route.ts");
 const pricing = read("app/pricing/page.tsx");
 
@@ -30,4 +33,7 @@ assert.match(team, /team_invitations/, "Team endpoint must persist invitations")
 assert.match(rotation, /previous_secret_key/, "Rotation must retain the previous key for migration");
 assert.match(admin, /delete-user/, "Admin API must expose protected user deletion");
 assert.match(pricing, /api\/billing\/initialize/, "Pricing page must launch checkout");
+assert.match(quota, /monthlyQuota/, "Challenge API must enforce monthly quotas");
+assert.match(accept, /accepted_at/, "Team acceptance must mark invitations accepted");
+assert.match(revoke, /secret_key_revoked_at/, "Secret revocation must persist a revocation timestamp");
 console.log("Integration contract tests passed");

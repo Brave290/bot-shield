@@ -60,6 +60,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403 });
     }
 
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const [{ data: subscription }, { data: accountProjects }] = await Promise.all([
+      supabaseAdmin.from("subscription_stats").select("tier_name,status").eq("user_id", project.user_id).maybeSingle(),
+      supabaseAdmin.from("projects").select("id").eq("user_id", project.user_id),
+    ]);
+    const tierName = subscription?.tier_name || "Hobby";
+    const { data: plan } = await supabaseAdmin.from("plan_pricing").select("monthly_requests").eq("id", tierName).maybeSingle();
+    const monthlyQuota = Number(plan?.monthly_requests ?? 1000);
+    if (subscription?.status === "past_due" || subscription?.status === "canceled") return NextResponse.json({ error: "Subscription is not active" }, { status: 402 });
+    if (monthlyQuota >= 0 && accountProjects?.length) {
+      const { count: monthlyCount } = await supabaseAdmin.from("verification_logs").select("id", { count: "exact", head: true }).in("project_id", accountProjects.map((item) => item.id)).gte("created_at", monthStart.toISOString());
+      if ((monthlyCount || 0) >= monthlyQuota) return NextResponse.json({ status: "blocked", reason: "Monthly request quota exceeded", tier: tierName, quota: monthlyQuota }, { status: 429 });
+    }
+
     const h = await headers();
     const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipHash = createHash("sha256").update(ip).digest("hex");

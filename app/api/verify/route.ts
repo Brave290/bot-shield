@@ -62,6 +62,7 @@ export async function POST(req: Request) {
 
     // Find project by secret key (try hashed first, then plaintext for legacy support)
     let matchedSecret = secretKey;
+    let matchedKeyType: "current" | "previous" = "current";
     let { data: project } = await supabaseAdmin
       .from("projects")
       .select("*")
@@ -85,6 +86,7 @@ export async function POST(req: Request) {
     if (!project) {
       const previous = await supabaseAdmin.from("projects").select("*").eq("previous_secret_key", secretKey).single();
       project = previous.data;
+      if (project) matchedKeyType = "previous";
     }
 
     if (!project) {
@@ -93,6 +95,8 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
+    if (matchedKeyType === "current" && project.secret_key_revoked_at) return NextResponse.json({ error: "Secret key has been revoked" }, { status: 401 });
+    if (matchedKeyType === "previous" && (project.previous_secret_key_revoked_at || (project.previous_secret_key_expires_at && new Date(project.previous_secret_key_expires_at).getTime() < Date.now()))) return NextResponse.json({ error: "Previous secret key is no longer valid" }, { status: 401 });
 
     // Verify JWT using derived key
     try {

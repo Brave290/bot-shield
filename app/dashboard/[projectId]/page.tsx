@@ -105,6 +105,11 @@ function ProjectDetailContent() {
     setRotating(true); const { data: session } = await supabase.auth.getSession(); const response = await fetch("/api/projects/rotate-secret", { method: "POST", headers: { Authorization: `Bearer ${session.session?.access_token || ""}`, "Content-Type": "application/json" }, body: JSON.stringify({ projectId }) }); const result = await response.json().catch(() => null); setRotating(false); if (!response.ok) { toast("error", result?.error || "Unable to rotate key"); return; } setNewSecret(result.secretKey); setProject((current: any) => ({ ...current, secret_key: result.secretKey })); toast("success", "Secret key rotated");
   };
 
+  const revokeCurrentSecret = async () => {
+    if (!await ask({ title: "Revoke the current key?", message: "Any backend using this key will stop verifying immediately. Rotate first if you need a migration window.", confirmLabel: "Revoke key", danger: true })) return;
+    const { data: session } = await supabase.auth.getSession(); const response = await fetch("/api/projects/revoke-secret", { method: "POST", headers: { Authorization: `Bearer ${session.session?.access_token || ""}`, "Content-Type": "application/json" }, body: JSON.stringify({ projectId, keyType: "current" }) }); const result = await response.json().catch(() => null); if (!response.ok) { toast("error", result?.error || "Unable to revoke key"); return; } toast("success", "Current secret key revoked");
+  };
+
   if (loading) {
     return (
       <DashboardShell userType="user" userName="Loading...">
@@ -301,7 +306,7 @@ function ProjectDetailContent() {
                 </div>
 
                 <div className="border-t border-slate-800 pt-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-lg font-semibold text-white">Secret key rotation</h3><p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-500">Rotate after a team member leaves or if the key may be exposed. Update your backend immediately.</p></div><button onClick={rotateSecret} disabled={rotating} className="rounded-xl border border-amber-500/30 px-4 py-2.5 text-sm font-medium text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">{rotating ? "Rotating..." : "Rotate secret key"}</button></div>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-lg font-semibold text-white">Secret key rotation</h3><p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-500">Rotate after a team member leaves or if the key may be exposed. Update your backend immediately.</p></div><div className="flex flex-wrap gap-2"><button onClick={rotateSecret} disabled={rotating} className="rounded-xl border border-amber-500/30 px-4 py-2.5 text-sm font-medium text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">{rotating ? "Rotating..." : "Rotate secret key"}</button><button onClick={revokeCurrentSecret} className="rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 hover:bg-red-500/10">Revoke current</button></div></div>
                   {newSecret && <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Copy this new key now</p><code className="mt-2 block break-all font-mono text-xs text-slate-200">{newSecret}</code><button onClick={() => copyToClipboard(newSecret)} className="mt-3 text-xs text-blue-300 hover:text-white">Copy new secret</button></div>}
                 </div>
 
