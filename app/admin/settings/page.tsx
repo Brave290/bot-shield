@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "@/components/toast";
+import { AdminBottomNav } from "@/components/admin-bottom-nav";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -98,5 +99,6 @@ export default function AdminSettings() {
         <button onClick={saveEmailRouting} className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium">Save routing</button>
       </div>
     </main>
+    <AdminBottomNav />
   </>);
 }

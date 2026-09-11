@@ -5,6 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { BrandLoader } from "@/components/loader";
 import { toast } from "@/components/toast";
 import { CustomSelect } from "@/components/custom-select";
+import { AdminBottomNav } from "@/components/admin-bottom-nav";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -67,5 +68,6 @@ export default function RateLimits() {
         {limits.length === 0 && <p className="text-slate-500 text-sm">No global rate limits configured.</p>}
       </div>
     </main>
+    <AdminBottomNav />
   </>);
 }
