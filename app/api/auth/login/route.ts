@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { createHash } from "crypto";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -36,6 +38,13 @@ export async function POST(req: Request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
+
+    const userAgent = req.headers.get("user-agent") || "unknown";
+    const ipHash = createHash("sha256").update(ip).digest("hex");
+    await Promise.all([
+      supabaseAdmin.from("security_events").insert({ user_id: data.user.id, event_type: "auth.login", ip_hash: ipHash, user_agent: userAgent, metadata: { email: data.user.email } }),
+      supabaseAdmin.from("login_alerts").insert({ user_id: data.user.id, ip_hash: ipHash, user_agent: userAgent, is_new_device: true }),
+    ]);
 
     return NextResponse.json({ 
       user: data.user,

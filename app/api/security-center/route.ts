@@ -11,15 +11,18 @@ async function auth(req: Request) {
 export async function GET(req: Request) {
   const user = await auth(req);
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  const [{ data: projects }, { data: events }, { data: hooks }, { data: onboarding }] = await Promise.all([
+  const [{ data: projects }, { data: events }, { data: hooks }, { data: onboarding }, { data: alerts }, { data: schedules }, { data: mfa }] = await Promise.all([
     supabaseAdmin.from("projects").select("id,name,secret_key_rotated_at,secret_key_revoked_at").eq("user_id", user.id).limit(100),
     supabaseAdmin.from("security_events").select("id,event_type,metadata,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     supabaseAdmin.from("webhook_subscriptions").select("id,endpoint_url,events,active,created_at,updated_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     supabaseAdmin.from("onboarding_progress").select("completed").eq("user_id", user.id).maybeSingle(),
+    supabaseAdmin.from("login_alerts").select("id,ip_hash,user_agent,country,is_new_device,acknowledged_at,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+    supabaseAdmin.from("key_rotation_schedules").select("id,project_id,interval_days,grace_hours,enabled,next_rotation_at,last_rotated_at").eq("user_id", user.id).limit(100),
+    supabaseAdmin.from("mfa_enrollments").select("method,status,enrolled_at").eq("user_id", user.id).maybeSingle(),
   ]);
   const projectIds = (projects || []).map((project) => project.id);
   const { data: policies } = projectIds.length ? await supabaseAdmin.from("project_policies").select("id,project_id,version,profile,threshold,action,challenge_type,created_at").in("project_id", projectIds).order("version", { ascending: false }).limit(100) : { data: [] };
-  return NextResponse.json({ projects: projects || [], events: events || [], hooks: hooks || [], policies: policies || [], onboarding: onboarding?.completed || {} });
+  return NextResponse.json({ projects: projects || [], events: events || [], hooks: hooks || [], policies: policies || [], onboarding: onboarding?.completed || {}, alerts: alerts || [], schedules: schedules || [], mfa: mfa || null });
 }
 
 export async function POST(req: Request) {
@@ -59,6 +62,24 @@ export async function POST(req: Request) {
     const { data, error } = await supabaseAdmin.from("webhook_subscriptions").insert({ user_id: user.id, endpoint_url: endpoint, secret_hash: createHash("sha256").update(secret).digest("hex"), events: Array.isArray(body.events) ? body.events : ["verification.blocked"] }).select("id,endpoint_url,events,active,created_at").single();
     if (error) return NextResponse.json({ error: "Unable to create webhook" }, { status: 500 });
     return NextResponse.json({ subscription: data, secret, warning: "Copy this signing secret now. It will not be shown again." });
+  }
+  if (body.action === "schedule-rotation") {
+    const projectId = String(body.project_id || "");
+    const intervalDays = [7, 30, 60, 90].includes(Number(body.interval_days)) ? Number(body.interval_days) : 30;
+    const { data: project } = await supabaseAdmin.from("projects").select("id").eq("id", projectId).eq("user_id", user.id).single();
+    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const next = new Date(Date.now() + intervalDays * 86400000).toISOString();
+    const { data, error } = await supabaseAdmin.from("key_rotation_schedules").upsert({ user_id: user.id, project_id: projectId, interval_days: intervalDays, grace_hours: Math.min(168, Math.max(1, Number(body.grace_hours) || 24)), enabled: body.enabled !== false, next_rotation_at: next }, { onConflict: "project_id" }).select("*").single();
+    if (error) return NextResponse.json({ error: "Unable to schedule rotation" }, { status: 500 });
+    await supabaseAdmin.from("security_events").insert({ user_id: user.id, event_type: "key.rotation_scheduled", metadata: { project_id: projectId, interval_days: intervalDays } });
+    return NextResponse.json({ schedule: data });
+  }
+  if (body.action === "enroll-mfa") {
+    const method = ["totp", "passkey", "security_key"].includes(body.method) ? body.method : "totp";
+    const { data, error } = await supabaseAdmin.from("mfa_enrollments").upsert({ user_id: user.id, method, status: "pending" }, { onConflict: "user_id" }).select("method,status,enrolled_at").single();
+    if (error) return NextResponse.json({ error: "Unable to start MFA enrollment" }, { status: 500 });
+    await supabaseAdmin.from("security_events").insert({ user_id: user.id, event_type: "mfa.enrollment_started", metadata: { method } });
+    return NextResponse.json({ enrollment: data, message: "MFA enrollment started. Complete verification in Supabase Auth before marking it enabled." });
   }
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
