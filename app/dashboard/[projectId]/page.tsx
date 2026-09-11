@@ -9,7 +9,6 @@ import { toast } from "@/components/toast";
 import { CustomSelect } from "@/components/custom-select";
 import { createClient } from "@supabase/supabase-js";
 import { 
-  ArrowLeft, 
   Shield, 
   Key, 
   Globe, 
@@ -140,12 +139,6 @@ function ProjectDetailContent() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.push("/dashboard")}
-              className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <div>
               <h1 className="text-2xl font-bold text-white flex items-center gap-3">
                 <Shield className="w-7 h-7 text-blue-500" />

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { BackButton } from "@/components/back-button";
 
 interface NavItem {
   label: string;
@@ -140,6 +141,8 @@ export function DashboardShell({ children, userType, userName, onLogout }: Dashb
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar (Mobile Menu Trigger) */}
         <header className="h-16 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+          <BackButton fallback={userType === "admin" ? "/admin" : "/dashboard"} label="Back" className="px-2.5 lg:px-3" />
           <button 
             onClick={() => setIsMobileOpen(true)} 
             className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
@@ -147,6 +150,7 @@ export function DashboardShell({ children, userType, userName, onLogout }: Dashb
           >
             <Menu className="w-5 h-5" />
           </button>
+          </div>
           <div className="hidden lg:block">
             <h1 className="text-lg font-semibold text-white capitalize">
               {navItems.find((n) => {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icons, CONTACTS, MotionLink } from "@/components/site";
+import { BackButton } from "@/components/back-button";
 
 function Hamburger({ open }: { open: boolean }) {
   return (
@@ -55,10 +56,13 @@ menu }: { menu?: { label: string; href: string }[] }) {
   return (<>
     <motion.header initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7 }} className={`fixed top-0 inset-x-0 z-[80] transition-colors duration-500 ${scrolled ? "bg-slate-950/85 backdrop-blur-xl border-b border-slate-800/60" : "bg-transparent"}`}>
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
+        <BackButton fallback={isAdmin ? "/admin" : "/"} label="" className="h-10 w-10 justify-center px-0 [&>svg]:h-4 [&>svg]:w-4" />
         <Link href="/" className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30"><Icons.Shield className="w-5 h-5" /></span>
           <span className="font-serif text-2xl font-bold text-white">BotShield</span>
         </Link>
+        </div>
         <nav className="hidden lg:flex items-center gap-8">
           {links.map((l) => (<Link key={l.href} href={l.href} className="text-sm text-slate-400 hover:text-white transition-colors">{l.label}</Link>))}
         </nav>
