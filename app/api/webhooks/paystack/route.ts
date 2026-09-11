@@ -14,6 +14,8 @@ export async function POST(req: Request) {
     const expected = Buffer.from(hash, "utf8"); const received = Buffer.from(signature, "utf8");
     if (expected.length !== received.length || !timingSafeEqual(expected, received)) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     const event = JSON.parse(body) as PaystackEvent;
+    const supportedEvents = new Set(["charge.success", "charge.failed", "subscription.disable", "subscription.not_renew"]);
+    if (!event.event || !supportedEvents.has(event.event) || !event.data?.reference) return NextResponse.json({ error: "Unsupported or incomplete event" }, { status: 400 });
     const eventId = event.data?.reference || `${event.event || "unknown"}:${hash}`;
     const { error: eventError } = await supabaseAdmin.from("billing_events").insert({ provider: "paystack", event_id: eventId, event_type: event.event || "unknown", payload: event });
     if (eventError?.code === "23505") return NextResponse.json({ received: true, duplicate: true });
@@ -21,6 +23,8 @@ export async function POST(req: Request) {
 
     const userId = event.data?.metadata?.user_id;
     if (userId) {
+      const { data: account } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (!account.user) return NextResponse.json({ error: "Unknown subscription account" }, { status: 400 });
       const success = event.event === "charge.success";
       const failed = event.event === "charge.failed";
       const canceled = event.event === "subscription.disable" || event.event === "subscription.not_renew";

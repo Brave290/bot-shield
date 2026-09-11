@@ -1,10 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const CONFIGURED_ADMINS = new Set((process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+const ADMIN_ALLOWED_IPS = new Set((process.env.ADMIN_ALLOWED_IPS || "").split(",").map((s) => s.trim()).filter(Boolean));
 
 export async function getAdmin(req: Request): Promise<{ email: string; role: string } | null> {
   const token = (req.headers.get("authorization") || "").replace("Bearer ", "");
   if (!token) return null;
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+  if (ADMIN_ALLOWED_IPS.size > 0 && !ADMIN_ALLOWED_IPS.has(clientIp)) return null;
   const { data, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !data.user?.email) return null;
   const email = data.user.email;

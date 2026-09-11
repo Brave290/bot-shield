@@ -9,6 +9,7 @@ Add these variables in **Vercel → Project Settings → Environment Variables**
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server only | Supabase service-role key; never expose to browsers |
 | `NEXT_PUBLIC_APP_URL` | Yes | Public client | Production URL, for example `https://bo-tshield.vercel.app` |
 | `ADMIN_EMAILS` | Yes | Server only | Comma-separated initial admin emails |
+| `ADMIN_ALLOWED_IPS` | Optional | Server only | Comma-separated administrator IP allowlist; use with MFA and a trusted network |
 | `ADMIN_API_KEY` | Recommended | Server only | Long random value for protected CMS/admin integrations |
 | `CRON_SECRET` | Recommended | Server only | Long random value used to authenticate scheduled jobs |
 | `BOTSHIELD_SECRET` | Recommended | Server only | Long random application secret; do not use as a project secret key |
