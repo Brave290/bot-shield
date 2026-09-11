@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     let payload: ChallengePayload;
     try {
       payload = ChallengePayloadSchema.parse(rawPayload);
-    } catch (validationError) {
+    } catch {
       return NextResponse.json(
         { error: "Invalid payload schema" },
         { status: 400 }
@@ -54,6 +54,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const requestOrigin = req.headers.get("origin");
+    const allowedOrigins: string[] = project.allowed_origins || [];
+    if (requestOrigin && allowedOrigins.length > 0 && !allowedOrigins.includes(requestOrigin)) {
+      return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403 });
+    }
+
     const h = await headers();
     const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipHash = createHash("sha256").update(ip).digest("hex");
@@ -61,6 +67,7 @@ export async function POST(req: Request) {
     const allowedIps: string[] = project.allowed_ips || [];
     const blockedIps: string[] = project.blocked_ips || [];
     const mode = project.mode || "active";
+    const recordMetric = (blocked: boolean) => supabaseAdmin.rpc("increment_request_metrics", { was_blocked: blocked });
 
     const signToken = async (score: number) => {
       const secret = new TextEncoder().encode(project.secret_key);
@@ -88,6 +95,7 @@ export async function POST(req: Request) {
         ip_hash: ipHash,
         country,
       });
+      await recordMetric(true);
       return NextResponse.json(
         { status: "blocked", reason: "IP blacklisted" },
         { status: 403 }
@@ -105,6 +113,7 @@ export async function POST(req: Request) {
         ip_hash: ipHash,
         country,
       });
+      await recordMetric(false);
       const token = await signToken(0);
       return NextResponse.json({
         status: "passed",
@@ -186,7 +195,7 @@ export async function POST(req: Request) {
         project_id: project.id,
         score,
         bot_type: botType,
-        status: wouldBlock ? "blocked" : "passed",
+        status: actuallyBlocked ? "blocked" : "passed",
         mode,
         ip_hash: ipHash,
         country,
@@ -195,6 +204,7 @@ export async function POST(req: Request) {
     if (logErr) {
       console.error("[BotShield] Log insert failed:", logErr);
     }
+    await recordMetric(actuallyBlocked);
 
     if (actuallyBlocked) {
       return NextResponse.json(

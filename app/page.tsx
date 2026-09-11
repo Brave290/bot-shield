@@ -100,6 +100,25 @@ function LiveStats() {
   );
 }
 
+function LiveSimulation() {
+  const [status, setStatus] = useState("Ready to run a real test request.");
+  const [running, setRunning] = useState(false);
+  const run = async () => {
+    setRunning(true); setStatus("Requesting a safe playground key…");
+    try {
+      const keyResponse = await fetch("/api/demo-keys");
+      const keys = await keyResponse.json();
+      if (!keyResponse.ok) throw new Error(keys.error || "Unable to create demo key");
+      setStatus("Sending behavioral signals to /api/challenge…");
+      const response = await fetch("/api/challenge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey: keys.apiKey, mouseData: { distance: 340, time: 2100, curves: 18 }, typingData: { totalChars: 32, totalTime: 5200, backspaces: 1 }, fingerprint: "fp_homepage_demo" }) });
+      const result = await response.json();
+      setStatus(response.ok ? `Passed · score ${result.score ?? 0} · signed token issued` : `${result.status || "Blocked"} · ${result.reason || result.error || "request completed"}`);
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Simulation failed"); }
+    finally { setRunning(false); }
+  };
+  return <section className="border-y border-slate-800/60 bg-slate-900/20 py-24"><div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_1.1fr] lg:items-center"><div><p className="mb-4 text-xs uppercase tracking-[0.3em] text-blue-400">Try the real path</p><h2 className="font-serif text-4xl font-bold text-white md:text-5xl">See a decision <span className="italic text-blue-400">before you integrate.</span></h2><p className="mt-5 max-w-xl leading-relaxed text-slate-400">This live simulation uses a rate-limited playground key, sends the same payload as the SDK, and records the request in the production analytics stream.</p><button onClick={run} disabled={running} className="mt-8 rounded-xl bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">{running ? "Running…" : "Run live simulation"}</button></div><div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><span className="font-mono text-xs text-slate-500">playground → /api/challenge</span><span className="flex items-center gap-2 text-xs text-emerald-400"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />live</span></div><div className="space-y-3 font-mono text-sm"><p className="text-slate-500">{`{`}</p><p className="pl-4 text-slate-400">apiKey: <span className="text-blue-300">bs_live_demo_playground</span>,</p><p className="pl-4 text-slate-400">behavior: <span className="text-emerald-300">human-like signals</span>,</p><p className="pl-4 text-slate-400">result: <span className="text-white">{status}</span></p><p className="text-slate-500">{`}`}</p></div></div></div></section>;
+}
+
 function Features() {
   const f = [
     [Icons.Bolt, "Featherweight by design", "The widget ships lightweight by design, smaller than one product photo. Your Core Web Vitals stay untouched."],
@@ -162,7 +181,7 @@ export default function Home() {
   return (<>
     <Preloader />
     <Navigation />
-    <main><Hero /><Marquee /><LiveStats /><Features /><ComparisonSection /><IntegrationsSection /><FAQ /><CTASection /></main>
+    <main><Hero /><Marquee /><LiveStats /><LiveSimulation /><Features /><ComparisonSection /><IntegrationsSection /><FAQ /><CTASection /></main>
     <Footer />
   </>);
 }

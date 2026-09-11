@@ -32,6 +32,8 @@ function ProjectDetailContent() {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<"overview" | "sdk" | "settings">("overview");
   const [copied, setCopied] = useState(false);
+  const [origins, setOrigins] = useState("");
+  const [savingOrigins, setSavingOrigins] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -45,7 +47,7 @@ function ProjectDetailContent() {
         .eq("user_id", user.id)
         .single();
       
-      if (data) setProject(data);
+      if (data) { setProject(data); setOrigins((data.allowed_origins || []).join("\n")); }
       setLoading(false);
     };
     fetchProject();
@@ -73,6 +75,14 @@ function ProjectDetailContent() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const saveOrigins = async () => {
+    setSavingOrigins(true);
+    const allowed_origins = origins.split(/[\n,]/).map((value) => value.trim().replace(/\/$/, "")).filter(Boolean);
+    const { error } = await supabase.from("projects").update({ allowed_origins }).eq("id", projectId);
+    if (!error) setProject((current: any) => ({ ...current, allowed_origins }));
+    setSavingOrigins(false);
   };
 
   if (loading) {
@@ -255,6 +265,13 @@ function ProjectDetailContent() {
                     defaultValue={project.domain}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-400 block mb-2">Allowed origins</label>
+                  <textarea value={origins} onChange={(e) => setOrigins(e.target.value)} rows={3} placeholder="https://your-site.com\nhttp://localhost:3000" className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 font-mono text-sm text-white focus:border-blue-500 focus:outline-none" />
+                  <p className="mt-2 text-xs text-slate-500">One exact origin per line. Leave empty to allow browser origins while testing; production sites should be listed explicitly.</p>
+                  <button onClick={saveOrigins} disabled={savingOrigins} className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 disabled:opacity-50">{savingOrigins ? "Saving..." : "Save origins"}</button>
                 </div>
 
                 <div className="pt-4 border-t border-slate-800">

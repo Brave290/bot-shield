@@ -23,6 +23,7 @@ function UserDashboardContent() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [usage, setUsage] = useState<{ tier: string; quota: number; today: number; month: number } | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,9 @@ function UserDashboardContent() {
         }
 
         setUser(user);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const usageResponse = await fetch("/api/usage", { headers: { Authorization: `Bearer ${sessionData.session?.access_token || ""}` } });
+        if (usageResponse.ok) setUsage(await usageResponse.json());
         const { data, error } = await supabase
           .from("projects")
           .select("*")
@@ -129,7 +133,11 @@ function UserDashboardContent() {
         </nav>
 
         {tab === "projects" && (
-          projects.length === 0 ? (
+          <>
+          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[["Plan", usage?.tier || "Hobby"], ["Requests today", usage?.today ?? 0], ["This month", usage?.month ?? 0], ["Monthly quota", usage?.quota === -1 ? "Unlimited" : usage?.quota ?? 1000]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 truncate text-2xl font-bold text-white">{String(value)}</p></div>)}
+          </div>
+          {projects.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-slate-800 bg-slate-900/30 py-20 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-900"><Shield className="h-8 w-8 text-slate-600" /></div>
               <h3 className="mb-2 text-xl font-semibold text-white">No projects yet</h3>
@@ -147,7 +155,8 @@ function UserDashboardContent() {
                 </button>
               ))}
             </div>
-          )
+          )}
+          </>
         )}
 
         {tab === "sdk" && <SdkView publicKey={firstProjectKey} />}

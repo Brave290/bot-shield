@@ -86,6 +86,7 @@
      * Starts behavioral telemetry collection immediately
      */
     init: function (userConfig) {
+      if (this.config) return this;
       this.config = Object.assign({
         apiKey: '',
         mode: 'invisible',
@@ -102,6 +103,7 @@
 
       this.startTracking();
       setTimeout(() => this.verify(), 1000);
+      return this;
     },
 
     /**
@@ -280,4 +282,27 @@
   };
 
   window.BotShield = BotShield;
+
+  // The simplest integration is a single script tag. Auto-start it when the
+  // tag includes data-api-key, while still allowing advanced users to call
+  // BotShield.init() manually with callbacks.
+  function autoInit() {
+    const scripts = document.querySelectorAll('script[src*="bot-shield"]');
+    const script = scripts[scripts.length - 1];
+    const apiKey = script && script.getAttribute('data-api-key');
+    if (!apiKey || BotShield.config) return;
+    BotShield.init({
+      apiKey,
+      mode: script.getAttribute('data-mode') || 'modal',
+      onSuccess: function (token) {
+        document.querySelectorAll('form[data-botshield]').forEach(function (form) {
+          let input = form.querySelector('input[name="bot_shield_token"]');
+          if (!input) { input = document.createElement('input'); input.type = 'hidden'; input.name = 'bot_shield_token'; form.appendChild(input); }
+          input.value = token;
+        });
+      }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoInit);
+  else autoInit();
 })(window);
