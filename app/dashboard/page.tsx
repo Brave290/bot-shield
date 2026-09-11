@@ -113,8 +113,8 @@ function UserDashboardContent() {
       <div className="space-y-6 sm:space-y-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Workspace</p>
-            <h1 className="text-3xl font-bold text-white sm:text-4xl">{tab === "projects" ? "Dashboard" : tabs.find((item) => item.id === tab)?.label}</h1>
+            <div className="mb-3 flex items-center gap-3"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Workspace</p><span className="rounded-full border border-slate-800 bg-slate-900/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">BotShield Cloud</span></div>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{tab === "projects" ? "Your protection workspace" : tabs.find((item) => item.id === tab)?.label}</h1>
             <p className="mt-1 text-slate-400">{tab === "projects" ? "Manage your BotShield projects" : tab === "sdk" ? "Connect BotShield to your website in minutes" : "Manage your workspace and account"}</p>
           </div>
           {tab === "projects" && (
@@ -135,7 +135,7 @@ function UserDashboardContent() {
         {tab === "projects" && (
           <>
           <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[["Plan", usage?.tier || "Hobby"], ["Requests today", usage?.today ?? 0], ["This month", usage?.month ?? 0], ["Monthly quota", usage?.quota === -1 ? "Unlimited" : usage?.quota ?? 1000]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 truncate text-2xl font-bold text-white">{String(value)}</p></div>)}
+            {[ ["Plan", usage?.tier || "Hobby"], ["Requests today", usage?.today ?? 0], ["This month", usage?.month ?? 0], ["Monthly quota", usage?.quota === -1 ? "Unlimited" : usage?.quota ?? 1000]].map(([label, value], index) => <div key={String(label)} className="group rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-950 p-5 transition hover:border-blue-500/40"><div className={`mb-4 h-1 w-10 rounded-full ${index === 0 ? "bg-blue-500" : index === 1 ? "bg-emerald-400" : index === 2 ? "bg-violet-400" : "bg-amber-400"}`} /><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 truncate text-2xl font-bold text-white">{String(value)}</p></div>)}
           </div>
           {projects.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-slate-800 bg-slate-900/30 py-20 text-center">

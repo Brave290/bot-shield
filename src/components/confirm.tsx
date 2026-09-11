@@ -1,39 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Icons } from "@/components/site";
+import { AlertTriangle, ArrowRight, ShieldCheck, X } from "lucide-react";
 
 type Req = { title: string; message: string; confirmLabel?: string; danger?: boolean; resolve: (v: boolean) => void };
-
-export function ask(opts: { title: string; message: string; confirmLabel?: string; danger?: boolean }): Promise<boolean> {
-  return new Promise((resolve) => {
-    window.dispatchEvent(new CustomEvent("app-confirm", { detail: { ...opts, resolve } }));
-  });
-}
+export function ask(opts: { title: string; message: string; confirmLabel?: string; danger?: boolean }): Promise<boolean> { return new Promise((resolve) => window.dispatchEvent(new CustomEvent("app-confirm", { detail: { ...opts, resolve } }))); }
 
 export function ConfirmHost() {
   const [req, setReq] = useState<Req | null>(null);
-  useEffect(() => {
-    const on = (e: Event) => setReq((e as CustomEvent).detail as Req);
-    window.addEventListener("app-confirm", on);
-    return () => window.removeEventListener("app-confirm", on);
-  }, []);
-  const close = (v: boolean) => { req?.resolve(v); setReq(null); };
-  return (
-    <AnimatePresence>
-      {req && (
-        <motion.div className="fixed inset-0 z-[130] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center px-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => close(false)}>
-          <motion.div initial={{ scale: 0.92, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-md p-7 rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${req.danger ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"}`}><Icons.Shield className="w-6 h-6" /></div>
-            <h3 className="font-serif text-2xl font-bold text-white mb-2">{req.title}</h3>
-            <p className="text-sm text-slate-400 font-light leading-relaxed mb-7">{req.message}</p>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => close(false)} className="px-5 py-2.5 rounded-xl border border-slate-700 hover:border-slate-500 text-sm text-slate-300">Cancel</button>
-              <button onClick={() => close(true)} className={`px-5 py-2.5 rounded-xl text-sm font-medium text-white ${req.danger ? "bg-red-600 hover:bg-red-500" : "bg-blue-600 hover:bg-blue-500"}`}>{req.confirmLabel || "Confirm"}</button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  useEffect(() => { const on = (e: Event) => setReq((e as CustomEvent).detail as Req); const key = (e: KeyboardEvent) => { if (e.key === "Escape") { req?.resolve(false); setReq(null); } }; window.addEventListener("app-confirm", on); window.addEventListener("keydown", key); return () => { window.removeEventListener("app-confirm", on); window.removeEventListener("keydown", key); }; }, [req]);
+  const close = (value: boolean) => { req?.resolve(value); setReq(null); };
+  return <AnimatePresence>{req && <motion.div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => close(false)}><motion.div role="dialog" aria-modal="true" aria-labelledby="confirm-title" initial={{ scale: .94, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: .97, opacity: 0 }} onClick={(event) => event.stopPropagation()} className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-700/80 bg-[#0a1120] shadow-2xl shadow-black/60"><div className={`h-1 w-full ${req.danger ? "bg-red-500" : "bg-blue-500"}`} /><div className="p-7"><div className="mb-6 flex items-start justify-between"><div className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${req.danger ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-blue-500/30 bg-blue-500/10 text-blue-400"}`}>{req.danger ? <AlertTriangle className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />}</div><button aria-label="Close dialog" onClick={() => close(false)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-800 hover:text-white"><X className="h-5 w-5" /></button></div><p className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">BotShield confirmation</p><h3 id="confirm-title" className="font-serif text-2xl font-bold text-white">{req.title}</h3><p className="mt-3 leading-relaxed text-slate-400">{req.message}</p><div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button onClick={() => close(false)} className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-medium text-slate-300 hover:border-slate-500 hover:text-white">Cancel</button><button onClick={() => close(true)} className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white ${req.danger ? "bg-red-600 hover:bg-red-500" : "bg-blue-600 hover:bg-blue-500"}`}>{req.confirmLabel || "Confirm"}<ArrowRight className="h-4 w-4" /></button></div></div></motion.div></motion.div>}</AnimatePresence>;
 }

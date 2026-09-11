@@ -128,6 +128,7 @@ export default function Admin() {
     { id: "admins", label: "Admins" },
     { id: "audit", label: "Audit log" },
     { id: "cron", label: "Cron jobs" },
+    { id: "cms", label: "Content" },
   ];
 
   return (<>
@@ -148,14 +149,13 @@ export default function Admin() {
 </nav></aside>
 <div className="flex-1 lg:ml-72">
 <main className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
         <div>
-          <h1 className="font-serif text-4xl font-bold text-white">Admin Console</h1>
-          <p className="text-sm text-slate-500 mt-1">{me?.email} · <span className={me?.role === "owner" ? "text-amber-400" : "text-blue-400"}>{me?.role}</span></p>
+          <div className="mb-3 flex items-center gap-3"><span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">Control plane v2</span><span className="flex items-center gap-1.5 text-xs text-emerald-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />All systems operational</span></div>
+          <h1 className="font-serif text-4xl font-bold tracking-tight text-white sm:text-5xl">Admin Console</h1>
+          <p className="mt-2 text-sm text-slate-500">{me?.email} · <span className={me?.role === "owner" ? "text-amber-400" : "text-blue-400"}>{me?.role}</span> · secure workspace</p>
         </div>
-        <div className="flex gap-2">
-          
-        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500"><span className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">Live data</span><button onClick={() => loadAll()} className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-300 hover:border-blue-500/50 hover:text-white">Refresh workspace</button></div>
       </div>
 
       <div className="grid lg:grid-cols-[220px_1fr] gap-8">
@@ -168,7 +168,7 @@ export default function Admin() {
         </aside>
 
         <section className="min-w-0 max-w-full">
-          {me && <AdminQuickLinks onJump={changeTab} />}
+          {me && <div className="mb-6"><AdminQuickLinks onJump={changeTab} /></div>}
 
           {tab === "overview" && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -240,13 +240,9 @@ export default function Admin() {
                     <p className="mt-1 text-xs text-slate-500">Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"} · {u.confirmed ? "Email confirmed" : "Email unconfirmed"}</p>
                     {u.last_sign_in_at && <p className="mt-1 text-xs text-slate-600">Last sign-in {new Date(u.last_sign_in_at).toLocaleString()}</p>}
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <select defaultValue={u.tier_name} id={`user-plan-${u.id}`} className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500/60 focus:outline-none">
-                      <option value="Hobby">Hobby</option>
-                      <option value="Pro">Pro</option>
-                      <option value="Enterprise">Enterprise</option>
-                    </select>
-                    <button onClick={() => saveUserPlan(u.id, (document.getElementById(`user-plan-${u.id}`) as HTMLSelectElement).value)} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500">Save plan</button>
+                  <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <div className="min-w-[150px]"><CustomSelect defaultValue={u.tier_name || "Hobby"} id={`user-plan-${u.id}`}><option value="Hobby">Hobby</option><option value="Pro">Pro</option><option value="Enterprise">Enterprise</option></CustomSelect></div>
+                    <button onClick={() => saveUserPlan(u.id, (document.getElementById(`user-plan-${u.id}`) as HTMLInputElement).value)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-500">Save plan</button>
                   </div>
                 </div>
               ))}

@@ -27,6 +27,23 @@ Add these variables in **Vercel → Project Settings → Environment Variables**
 
 **Development** can use local Supabase or a non-production Supabase project, `http://localhost:3000`, Paystack test keys, and local random secrets.
 
+## Where to get each value
+
+1. **Supabase URL and anon key:** open the Supabase project, select **Project Settings → Data API**, and copy the **Project URL** and **Publishable/anon key**. For the service role key, open **Project Settings → API Keys**, reveal the secret service-role key, and add it only as `SUPABASE_SERVICE_ROLE_KEY`.
+2. **Database schema:** the repository migrations are already applied to the connected BotShield Supabase project. For a separate staging project, run the repository migrations with the Supabase CLI or apply the SQL files in `supabase/migrations` in order.
+3. **Application URL:** use the exact deployed Vercel URL for `NEXT_PUBLIC_APP_URL`, with no trailing slash. Add custom domains after DNS is working, then update this value.
+4. **Admin emails:** put the email addresses that are allowed into `ADMIN_EMAILS`, separated by commas. The account must also exist in Supabase Auth.
+5. **Random server secrets:** generate each value locally with `openssl rand -hex 32`. Do not reuse one secret for multiple variables.
+6. **Paystack keys:** create or open a Paystack account, use **Settings → API Keys & Webhooks**, and copy the public key into `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` and the secret key into `PAYSTACK_SECRET_KEY`. Use test keys for Preview and Development; use live keys only for Production.
+7. **Paystack webhook:** in the same Paystack screen, add `https://YOUR-VERCEL-DOMAIN/api/webhooks/paystack` as the webhook URL. Send a test event and check Vercel Runtime Logs for a successful response.
+8. **Smoke-test keys:** create a separate non-production BotShield project, copy its public key into `SMOKE_API_KEY` and secret key into `SMOKE_SECRET_KEY`, and set `BASE_URL` to the staging/preview URL. Never use a production secret in automated tests.
+
+## Add them in Vercel
+
+Open **Vercel → your BotShield project → Settings → Environment Variables → Add New**. Enter the variable name exactly, paste the value, select the target environment, and save. Add all server secrets to **Production** and **Preview** separately with different values. After saving, go to **Deployments**, open the latest deployment, choose **Redeploy**, and enable **Use existing Build Cache** only if you did not change public variables; otherwise redeploy without the cache.
+
+After deployment, verify `/api/stats/realtime`, the homepage live simulation, login, project creation, and the Paystack webhook test. Never test by printing secret values in browser code or committing a filled `.env` file.
+
 ## Generate random secrets
 
 ```bash
