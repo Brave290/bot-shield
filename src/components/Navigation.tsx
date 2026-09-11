@@ -51,6 +51,7 @@ menu }: { menu?: { label: string; href: string }[] }) {
     { label: "Rate limits", href: "/admin/rate-limits" },
     { label: "Platform settings", href: "/admin/settings" },
     { label: "Analytics", href: "/dashboard/analytics" },
+    { label: "Security Center", href: "/dashboard/security" },
     { label: "Docs", href: "/docs" },
   ] : [
     { label: "Features", href: "/features" },
