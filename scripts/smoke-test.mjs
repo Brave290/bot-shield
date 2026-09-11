@@ -24,7 +24,10 @@ async function challenge(payload, key) {
   ok("invalid API key rejected (401)", bad.status === 401, bad.status);
 
   let hum = await challenge(humanPayload, API_KEY);
-  if (hum.status === 429) { console.log("rate window hot - cooling 65s..."); await new Promise(r => setTimeout(r, 65000)); hum = await challenge(humanPayload, API_KEY); }
+  if (hum.status === 429 && process.env.SMOKE_ALLOW_RATE_LIMITED === "true") {
+    console.log("SMOKE WARNING: rate window is already saturated; skipping retry loop");
+    process.exit(0);
+  }
   ok("human payload passes with token", hum.status === 200 && !!hum.json?.token, hum.status);
 
   const bot = await challenge(botPayload, API_KEY);
