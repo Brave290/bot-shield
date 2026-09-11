@@ -12,10 +12,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function randomKey(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
-}
-
 export default function NewProjectPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -40,18 +36,14 @@ export default function NewProjectPage() {
       return;
     }
 
-    const { data, error: insertError } = await supabase
-      .from("projects")
-      .insert({
-        user_id: user.id,
-        name: trimmedName,
-        api_key: randomKey("bs_live"),
-        secret_key: randomKey("bs_sec"),
-        allowed_origins: domain.trim() ? [domain.trim()] : [],
-        sensitivity,
-      })
-      .select("id")
-      .single();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/projects/create", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sessionData.session?.access_token || ""}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmedName, origin: domain.trim(), sensitivity }),
+    });
+    const data = await response.json().catch(() => null);
+    const insertError = response.ok ? null : { message: data?.error || "Unable to create project" };
 
     if (insertError || !data) {
       setError(insertError?.message || "Unable to create project. Please try again.");

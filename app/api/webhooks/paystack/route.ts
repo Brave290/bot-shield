@@ -21,21 +21,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const event = JSON.parse(body) as { event?: string; data?: { metadata?: { user_id?: string } } };
+    const event = JSON.parse(body) as { event?: string; data?: { reference?: string; metadata?: { user_id?: string; tier?: string } } };
 
     // Only process successful charges
     if (event.event === "charge.success") {
       const metadata = event.data?.metadata || {};
       const userId = metadata.user_id;
+      const tier = metadata.tier === "Enterprise" ? "Enterprise" : "Pro";
 
       if (!userId) {
         console.error("[Paystack] No user_id found in metadata");
         return NextResponse.json({ error: "Missing user_id" }, { status: 400 });
       }
 
-      // Upgrade user to Pro
+      const eventId = event.data?.reference || hash;
+      const { error: eventError } = await supabaseAdmin.from("billing_events").insert({ provider: "paystack", event_id: eventId, event_type: event.event || "charge.success", payload: event });
+      if (eventError?.code === "23505") return NextResponse.json({ received: true, duplicate: true });
+      if (eventError) return NextResponse.json({ error: "Unable to record billing event" }, { status: 500 });
       const { error } = await supabaseAdmin.from("subscription_stats").upsert(
-        { user_id: userId, tier_name: "Pro", updated_at: new Date().toISOString() },
+        { user_id: userId, tier_name: tier, status: "active", provider: "paystack", customer_code: event.data?.reference || null, updated_at: new Date().toISOString() },
         { onConflict: "user_id" }
       );
 
@@ -44,7 +48,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "DB update failed" }, { status: 500 });
       }
       
-      console.log(`[Paystack] User ${userId} upgraded to Pro`);
+      console.log(`[Paystack] User ${userId} upgraded to ${tier}`);
     }
 
     return NextResponse.json({ received: true });

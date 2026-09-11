@@ -61,14 +61,16 @@ export async function POST(req: Request) {
     }
 
     // Find project by secret key (try hashed first, then plaintext for legacy support)
+    let matchedSecret = secretKey;
     let { data: project } = await supabaseAdmin
       .from("projects")
       .select("*")
       .eq("secret_key", "hash:" + require("crypto")
         .createHmac("sha256", "botshield-key-derivation")
         .update(secretKey)
-        .digest("hex"))
+      .digest("hex"))
       .single();
+    if (project) matchedSecret = project.secret_key;
 
     // Fallback to plaintext secret for migration period
     if (!project) {
@@ -81,6 +83,11 @@ export async function POST(req: Request) {
     }
 
     if (!project) {
+      const previous = await supabaseAdmin.from("projects").select("*").eq("previous_secret_key", secretKey).single();
+      project = previous.data;
+    }
+
+    if (!project) {
       return NextResponse.json(
         { error: "Invalid secret key" },
         { status: 401 }
@@ -89,7 +96,7 @@ export async function POST(req: Request) {
 
     // Verify JWT using derived key
     try {
-      const jwtSecret = new TextEncoder().encode(project.secret_key);
+      const jwtSecret = new TextEncoder().encode(matchedSecret);
       const { payload: jwtPayload } = await jwtVerify(token, jwtSecret, {
         issuer: "botshield",
         audience: project.id,
