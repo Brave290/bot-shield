@@ -51,6 +51,7 @@ export function DashboardShell({ children, userType, userName, onLogout }: Dashb
         { id: "sdk", label: "SDK & Integration", href: "/dashboard?tab=sdk", icon: Code2 },
         { id: "analytics", label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
         { id: "security", label: "Security Center", href: "/dashboard/security", icon: Shield },
+        { id: "simulator", label: "Rules Simulator", href: "/dashboard/simulator", icon: Shield },
         { id: "settings", label: "Settings", href: "/dashboard?tab=settings", icon: Settings },
       ];
 
