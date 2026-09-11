@@ -40,6 +40,8 @@ export default function Admin() {
   const [newAdmin, setNewAdmin] = useState("");
   const [transferTo, setTransferTo] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [userPlans, setUserPlans] = useState<Record<string, string>>({});
 
   const changeTab = (nextTab: Tab) => {
     setTab(nextTab);
@@ -99,6 +101,8 @@ export default function Admin() {
   const saveUserPlan = async (userId: string, tierName: string) => {
     await act({ action: "update-user-plan", user_id: userId, tier_name: tierName }, "User plan updated");
   };
+
+  const visibleUsers = users.filter((user) => String(user.email || "").toLowerCase().includes(userSearch.toLowerCase()));
 
   const deleteUser = async (user: any) => {
     const confirmed = await ask({ title: `Delete ${user.email || "this user"}?`, message: "This permanently removes the Auth account, projects, verification logs, team invitations, and subscription record. It cannot be undone.", confirmLabel: "Delete permanently", danger: true });
@@ -226,10 +230,11 @@ export default function Admin() {
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">Users and plans</h2>
                 <p className="mt-1 text-xs text-slate-500">Review registered accounts and assign any available BotShield plan. Changes are recorded in the audit log.</p>
+                <input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search users by email" className="mt-4 w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500/60" />
               </div>
               <div className="space-y-4 pb-24">
-                {users.length === 0 && <p className="text-slate-500 font-light">No registered users found.</p>}
-                {users.map((u) => (
+                {visibleUsers.length === 0 && <p className="text-slate-500 font-light">No matching users found.</p>}
+                {visibleUsers.map((u) => (
                 <div key={u.id} className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="break-all text-sm font-medium text-white">{u.email || "No email"}</p>
@@ -237,9 +242,11 @@ export default function Admin() {
                     {u.last_sign_in_at && <p className="mt-1 text-xs text-slate-600">Last sign-in {new Date(u.last_sign_in_at).toLocaleString()}</p>}
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                    <div className="min-w-[150px]"><CustomSelect defaultValue={u.tier_name || "Hobby"} id={`user-plan-${u.id}`}><option value="Hobby">Hobby</option><option value="Pro">Pro</option><option value="Enterprise">Enterprise</option></CustomSelect></div>
+                    <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:min-w-[270px]">
+                      {["Hobby", "Pro", "Enterprise"].map((plan) => { const selected = userPlans[u.id] || u.tier_name || "Hobby"; return <button key={plan} type="button" onClick={() => setUserPlans((current) => ({ ...current, [u.id]: plan }))} className={`rounded-lg px-2 py-2 text-xs font-medium transition ${selected === plan ? "bg-blue-600 text-white shadow" : "text-slate-500 hover:bg-slate-800 hover:text-white"}`}>{plan}</button>; })}
+                    </div>
                     <button onClick={() => setSelectedUser(u)} className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-white">View details</button>
-                    <button onClick={() => saveUserPlan(u.id, (document.getElementById(`user-plan-${u.id}`) as HTMLInputElement).value)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-500">Save plan</button>
+                    <button onClick={() => saveUserPlan(u.id, userPlans[u.id] || u.tier_name || "Hobby")} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-500">Save plan</button>
                     {me?.role === "owner" && <button onClick={() => deleteUser(u)} className="rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 transition hover:bg-red-500/10">Delete user</button>}
                   </div>
                 </div>
