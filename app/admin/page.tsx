@@ -125,8 +125,8 @@ export default function Admin() {
 
   return (<>
     <Navigation />
-    <div className="min-h-screen bg-[#020617] pt-20 lg:flex">
-      <aside className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-[#07101e]/95 px-2 py-2 backdrop-blur-xl lg:sticky lg:top-20 lg:bottom-auto lg:h-[calc(100vh-5rem)] lg:w-72 lg:shrink-0 lg:border-r lg:border-t-0 lg:bg-slate-950/60 lg:px-4 lg:py-6">
+    <div className="min-h-screen overflow-x-hidden bg-[#020617] pt-32 lg:flex lg:overflow-visible lg:pt-20">
+      <aside className="fixed left-0 right-0 top-20 z-50 border-b border-slate-800 bg-[#07101e]/95 px-2 py-2 backdrop-blur-xl lg:sticky lg:top-20 lg:bottom-auto lg:h-[calc(100vh-5rem)] lg:w-72 lg:shrink-0 lg:border-r lg:border-t-0 lg:bg-slate-950/60 lg:px-4 lg:py-6">
         <div className="hidden border-b border-slate-800/80 px-3 pb-6 lg:block"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><Icons.Shield className="h-5 w-5" /></span><div><p className="font-serif text-xl font-bold text-white">BotShield</p><p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Control plane</p></div></div></div>
         <nav className="flex items-center justify-around gap-1 lg:mt-6 lg:block lg:space-y-7">
           <div className="lg:space-y-1"><p className="mb-2 hidden px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600 lg:block">Workspace</p>{[["overview", "Overview", "chart"], ["users", "Users", "users"], ["rules", "Project rules", "shield"], ["pricing", "Pricing", "file"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium transition lg:flex-row lg:gap-3 lg:py-3 lg:text-sm ${tab === id ? "bg-blue-600/15 text-blue-300 ring-1 ring-blue-500/30" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
@@ -135,7 +135,7 @@ export default function Admin() {
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
-        <main className="mx-auto max-w-[1500px] px-4 pb-28 pt-10 sm:px-6 lg:px-10 lg:pt-14">
+        <main className="mx-auto max-w-[1500px] px-4 pb-10 pt-6 sm:px-6 lg:px-10 lg:pb-24 lg:pt-14">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="mb-3 flex items-center gap-3"><span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">Control plane v2</span><span className="flex items-center gap-1.5 text-xs text-emerald-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />All systems operational</span></div>
