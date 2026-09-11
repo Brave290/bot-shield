@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Navigation } from "@/components/Navigation";
 import { BrandLoader } from "@/components/loader";
+import Link from "next/link";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -14,10 +15,13 @@ type AnalyticsData = { totals: { requests: number; blocked: number; humans: numb
 export default function Analytics() {
   const [range, setRange] = useState("7d");
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data: sess } = await supabase.auth.getSession();
+      const admin = await fetch("/api/admin/data?type=me", { headers: { Authorization: `Bearer ${sess.session?.access_token || ""}` } });
+      setIsAdmin(admin.ok);
       const res = await fetch(`/api/analytics?range=${range}`, { headers: { Authorization: `Bearer ${sess.session?.access_token || ""}` } });
       const body = await res.json().catch(() => null);
       if (res.ok && body && typeof body === "object") {
@@ -40,7 +44,7 @@ export default function Analytics() {
 
   return (<>
     <Navigation />
-    <main className="pt-28 pb-24 max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
+    <main className="pt-28 pb-32 max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-4xl font-bold text-white">Analytics</h1>
@@ -115,5 +119,6 @@ export default function Analytics() {
         </div>
       </div>
     </main>
+    {isAdmin && <nav aria-label="Admin navigation" className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-[#07101e]/95 px-2 py-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"><div className="mx-auto flex max-w-xl items-stretch justify-between gap-1 overflow-x-auto"><Link href="/admin" className="min-w-[72px] rounded-xl px-2 py-2 text-center text-[10px] text-slate-400 hover:bg-slate-900 hover:text-white">Overview</Link><Link href="/admin?tab=users" className="min-w-[72px] rounded-xl px-2 py-2 text-center text-[10px] text-slate-400 hover:bg-slate-900 hover:text-white">Users</Link><Link href="/dashboard/analytics" className="min-w-[72px] rounded-xl bg-blue-600/15 px-2 py-2 text-center text-[10px] text-blue-300">Analytics</Link><Link href="/admin?tab=audit" className="min-w-[72px] rounded-xl px-2 py-2 text-center text-[10px] text-slate-400 hover:bg-slate-900 hover:text-white">Audit</Link><Link href="/admin/settings" className="min-w-[72px] rounded-xl px-2 py-2 text-center text-[10px] text-slate-400 hover:bg-slate-900 hover:text-white">Settings</Link></div></nav>}
   </>);
 }
