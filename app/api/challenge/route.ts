@@ -35,6 +35,7 @@ function decisionReasons(payload: ChallengePayload, score: number, botType: stri
 
 export async function POST(req: Request) {
   try {
+    const requestId = randomUUID();
     const parsed = ChallengePayloadSchema.safeParse(await req.json());
     if (!parsed.success) return NextResponse.json({ error: "Invalid payload schema" }, { status: 400 });
     const payload = parsed.data;
@@ -80,8 +81,10 @@ export async function POST(req: Request) {
     const { error: tokenError } = await supabaseAdmin.from("challenge_tokens").insert({ jti, project_id: project.id, score, fingerprint: payload.fingerprint || null, expires_at: expiresAt });
     if (tokenError) throw tokenError;
 
-    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: "issued", mode: project.mode || "active", ip_hash: ipHash, country: (req.headers.get("x-vercel-ip-country") || "unknown").toLowerCase(), browser_fingerprint: payload.fingerprint || null, ip_address: ip });
-    return NextResponse.json({ token, score, botType, reasons, mode: project.mode || "active" });
+    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, bot_type: botType, status: "issued", mode: project.mode || "active", ip_hash: ipHash, country: (req.headers.get("x-vercel-ip-country") || "unknown").toLowerCase(), browser_fingerprint: payload.fingerprint || null, ip_address: ip, request_id: requestId, risk_reasons: reasons });
+    const response = NextResponse.json({ token, score, botType, reasons, mode: project.mode || "active", requestId });
+    response.headers.set("X-BotShield-Request-Id", requestId);
+    return response;
   } catch (error) {
     console.error("[BotShield] Challenge error", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

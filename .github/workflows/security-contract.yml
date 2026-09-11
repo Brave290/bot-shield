@@ -1,0 +1,25 @@
+name: Security Contract Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  security-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run test:integration
+      - run: node --check public/bot-shield.js
+      - run: npx eslint app/api/challenge/route.ts app/api/verify/route.ts app/api-reference/page.tsx app/dashboard/security/page.tsx src/components/dashboard/sdk-view.tsx src/lib/scoring-engine.ts scripts/integration-contract-test.mjs scripts/live-security-test.mjs

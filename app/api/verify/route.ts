@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { jwtVerify } from "jose";
 import { z } from "zod";
-import { createHash, createHmac } from "crypto";
+import { createHash, createHmac, randomUUID } from "crypto";
 import { thresholdFor } from "@/lib/bot-type";
 
 const VerifyPayloadSchema = z.object({ secretKey: z.string().min(1), token: z.string().min(1) });
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    const requestId = randomUUID();
     const h = await headers();
     const ip = (h.get("x-forwarded-for") || "unknown").split(",")[0].trim();
     const scopeKey = createHash("sha256").update(ip).digest("hex");
@@ -60,9 +61,11 @@ export async function POST(req: Request) {
     const score = Number(challenge.score);
     const threshold = thresholdFor(project.sensitivity);
     const status = score >= threshold ? "blocked" : "human";
-    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, status, bot_type: status === "blocked" ? "suspicious" : "human", mode: project.mode || "active", ip_hash: scopeKey, country: (h.get("x-vercel-ip-country") || "unknown").toLowerCase(), ip_address: ip });
+    await supabaseAdmin.from("verification_logs").insert({ project_id: project.id, score, status, bot_type: status === "blocked" ? "suspicious" : "human", mode: project.mode || "active", ip_hash: scopeKey, country: (h.get("x-vercel-ip-country") || "unknown").toLowerCase(), ip_address: ip, request_id: requestId, risk_reasons: status === "blocked" ? ["threshold_exceeded"] : ["below_threshold"] });
     await supabaseAdmin.rpc("increment_request_metrics", { was_blocked: status === "blocked" });
-    return NextResponse.json({ status, score });
+    const response = NextResponse.json({ status, score, requestId });
+    response.headers.set("X-BotShield-Request-Id", requestId);
+    return response;
   } catch (error) {
     console.error("[BotShield] Verify degraded", error);
     // Availability policy: do not lock out a customer when our control plane is unavailable.

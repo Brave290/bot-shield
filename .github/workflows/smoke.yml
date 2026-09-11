@@ -19,3 +19,11 @@ jobs:
           SMOKE_SECRET_KEY: ${{ secrets.SMOKE_SECRET_KEY }}
           SMOKE_ALLOW_RATE_LIMITED: "true"
         run: node scripts/smoke-test.mjs
+      - name: Run security scenarios when staging credentials are configured
+        env:
+          BASE_URL: https://bo-tshield.vercel.app
+          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          SMOKE_SECRET_KEY: ${{ secrets.SMOKE_SECRET_KEY }}
+          SMOKE_ALLOWED_ORIGIN: https://bo-tshield.vercel.app
+          RUN_RATE_LIMIT: "false"
+        run: node scripts/live-security-test.mjs
