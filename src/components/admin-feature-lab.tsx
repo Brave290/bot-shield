@@ -6,7 +6,7 @@ type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rul
 type Feature = [string, string, "Live" | "Next", string, Tab?];
 const FEATURES: Feature[] = [
   ["User directory", "Search, inspect, assign plans, and permanently remove accounts.", "Live", "users", "users"],
-  ["Plan control center", "Update pricing, quotas, tags, and customer entitlements.", "Live", "file", "pricing"],
+  ["Plan control center", "Update pricing, enforce monthly quotas, and manage customer entitlements.", "Live", "file", "pricing"],
   ["Project security rules", "Manage shadow mode, IP allowlists, blocklists, and limits.", "Live", "shield", "rules"],
   ["Audit trail", "Review sensitive actions with actor, time, target, and IP context.", "Live", "file", "audit"],
   ["Scheduled jobs", "Run and inspect maintenance, retention, and sync jobs.", "Live", "activity", "cron"],
@@ -15,8 +15,8 @@ const FEATURES: Feature[] = [
   ["Platform settings", "Manage maintenance mode and notification configuration.", "Live", "settings"],
   ["Analytics workspace", "Monitor traffic, requests, conversion, and bot pressure.", "Live", "trending"],
   ["Billing event monitor", "Track successful, duplicate, failed, and pending payments.", "Next", "chart"],
-  ["Team access", "Invite project members and assign least-privilege roles.", "Next", "users"],
-  ["Key rotation center", "Rotate project secrets and track migration compatibility.", "Next", "shield"],
+  ["Team access", "Invite members, accept invitations, and assign project roles.", "Live", "users"],
+  ["Key rotation center", "Rotate, expire, and revoke project secrets with migration protection.", "Live", "shield"],
   ["Origin policy manager", "Review and approve customer website origins.", "Next", "shield"],
   ["Webhook monitor", "Inspect delivery health and replay failed callbacks.", "Next", "activity"],
   ["Email delivery", "Test, monitor, and troubleshoot transactional email.", "Next", "mail"],

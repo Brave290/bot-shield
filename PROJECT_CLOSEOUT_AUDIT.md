@@ -11,7 +11,7 @@ The project is **not yet fully production-closed** because several capabilities 
 | Feature | Current status | Evidence | Closeout action |
 |---|---|---|---|
 | User directory | Live | Admin users workspace and admin data API | Add search, pagination, and export later |
-| Plan control center | Live | Admin pricing and user-plan controls | Validate every plan against live billing events |
+| Plan control center | Live | Admin pricing, user-plan controls, and challenge quota enforcement | Validate every plan against live billing events |
 | Project security rules | Live | Project rules, CORS origins, IP lists, modes | Add rule simulation and bulk actions |
 | Audit trail | Live | Audit log API and admin view | Add retention and export controls |
 | Scheduled jobs | Live | Cron admin page and cron API | Add failure alerting and retry history |
@@ -20,8 +20,8 @@ The project is **not yet fully production-closed** because several capabilities 
 | Platform settings | Live | Admin settings and protected mutations | Move sensitive settings to environment-only configuration |
 | Analytics workspace | Live | User analytics and realtime metrics | Add charts, date filters, and export |
 | Billing event monitor | Partial | Paystack initialization, webhook, billing event table | Add admin billing-events screen and reconciliation |
-| Team access | Partial | Invitation table, member table, invite/list API, project settings UI | Add acceptance route, email delivery, and member removal |
-| Key rotation center | Partial | Rotation endpoint, previous-key compatibility, settings UI | Add revocation and expiry job |
+| Team access | Live core | Invitation table, member table, invite/list API, acceptance route, and project settings UI | Add invitation email delivery and full role enforcement |
+| Key rotation center | Live core | Rotation endpoint, previous-key compatibility window, revocation endpoint, verification checks, and settings UI | Add scheduled cleanup job and historical key audit |
 | Origin policy manager | Live | Allowed-origin editor and challenge enforcement | Add origin health check |
 | Webhook monitor | Not complete | Paystack webhook exists | Add delivery records, retry, and replay UI |
 | Email delivery | Partial | Resend settings and test-email action | Add provider abstraction and delivery logs |
@@ -49,9 +49,9 @@ The most important remaining security work is a formal review of all row-level s
 | Authentication | Confirm email, password reset, and protected admin access | Implemented; perform staging verification |
 | SDK | Test script-tag auto-init on a second domain | Implemented; browser test still recommended |
 | CORS | Add exact production origins for each project | Implemented; customer configuration remains |
-| Quotas | Confirm API enforcement matches paid-plan copy | Project-count enforcement exists; request quota enforcement needs completion |
-| Billing lifecycle | Handle success, failure, cancellation, renewal, and refund | Success path exists; lifecycle is incomplete |
-| Teams | Accept invitations and enforce roles on every project mutation | Invitation creation exists; acceptance and full authorization remain |
+| Quotas | Confirm API enforcement matches paid-plan copy | Monthly request quota enforcement is now in the challenge API; staging load verification remains |
+| Billing lifecycle | Handle success, failure, cancellation, renewal, and refund | Success, failure, and cancellation states are handled; renewal and refund reconciliation remain |
+| Teams | Accept invitations and enforce roles on every project mutation | Invitation acceptance exists; full authorization and delivery remain |
 | Monitoring | Add error tracking, uptime checks, and alert delivery | Basic cron and metrics exist; external monitoring remains |
 | Testing | Add browser tests against staging | Contract tests pass; browser suite remains |
 | Backups | Enable and verify database backup/restore process | Operational task outside this repository pass |
