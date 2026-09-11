@@ -118,37 +118,19 @@ export default function Admin() {
 
   if (state === "loading") return (<><Navigation /><BrandLoader /></>);
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "messages", label: `Messages (${messages.length})` },
-    { id: "applications", label: `Applications (${apps.length})` },
-    { id: "pricing", label: "Pricing" },
-    { id: "users", label: `Users (${users.length})` },
-    { id: "rules", label: "Project rules" },
-    { id: "admins", label: "Admins" },
-    { id: "audit", label: "Audit log" },
-    { id: "cron", label: "Cron jobs" },
-    { id: "cms", label: "Content" },
-  ];
-
   return (<>
     <Navigation />
-    <div className="lg:flex min-h-screen pt-24">
-<aside className="hidden lg:block fixed top-24 bottom-0 left-0 w-72 border-r border-slate-800 bg-slate-900/30 overflow-y-auto"><nav className="p-6 space-y-1">
-<button onClick={() => changeTab("overview")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "overview" ? "bg-blue-600/15 text-blue-400 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="chart" className="w-4 h-4 shrink-0" />Overview</button>
-<button onClick={() => changeTab("rules")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "rules" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="shield" className="w-4 h-4 shrink-0" />Project Rules</button>
-<a href="/admin/rate-limits" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="zap" className="w-4 h-4 shrink-0" />Rate Limits</a>
-<a href="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="settings" className="w-4 h-4 shrink-0" />Settings</a>
-<a href="/dashboard/analytics" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="trending" className="w-4 h-4 shrink-0" />Analytics</a>
-<button onClick={() => changeTab("admins")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "admins" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="users" className="w-4 h-4 shrink-0" />Admins</button>
-<button onClick={() => changeTab("audit")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "audit" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="file" className="w-4 h-4 shrink-0" />Audit Log</button>
-<button onClick={() => changeTab("cron")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "cron" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="activity" className="w-4 h-4 shrink-0" />Cron jobs</button>
-<button onClick={() => changeTab("messages")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors " + (tab === "messages" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:bg-slate-800/50 hover:text-white")}><Icon name="mail" className="w-4 h-4 shrink-0" />Messages</button>
-<a href="/test" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="flask" className="w-4 h-4 shrink-0" />Playground</a>
-<a href="/docs" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"><Icon name="book" className="w-4 h-4 shrink-0" />Docs</a>
-</nav></aside>
-<div className="flex-1 lg:ml-72">
-<main className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-[#020617] pt-20 lg:flex">
+      <aside className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-[#07101e]/95 px-2 py-2 backdrop-blur-xl lg:sticky lg:top-20 lg:bottom-auto lg:h-[calc(100vh-5rem)] lg:w-72 lg:shrink-0 lg:border-r lg:border-t-0 lg:bg-slate-950/60 lg:px-4 lg:py-6">
+        <div className="hidden border-b border-slate-800/80 px-3 pb-6 lg:block"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><Icons.Shield className="h-5 w-5" /></span><div><p className="font-serif text-xl font-bold text-white">BotShield</p><p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Control plane</p></div></div></div>
+        <nav className="flex items-center justify-around gap-1 lg:mt-6 lg:block lg:space-y-7">
+          <div className="lg:space-y-1"><p className="mb-2 hidden px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600 lg:block">Workspace</p>{[["overview", "Overview", "chart"], ["users", "Users", "users"], ["rules", "Project rules", "shield"], ["pricing", "Pricing", "file"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium transition lg:flex-row lg:gap-3 lg:py-3 lg:text-sm ${tab === id ? "bg-blue-600/15 text-blue-300 ring-1 ring-blue-500/30" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
+          <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operations</p>{[["messages", "Messages", "mail"], ["applications", "Applications", "file"], ["rules", "Security rules", "shield"], ["audit", "Audit log", "file"], ["cron", "Cron jobs", "activity"], ["admins", "Administrators", "users"]].map(([id, label, icon]) => <button key={id} onClick={() => changeTab(id as Tab)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${tab === id ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name={icon} className="h-4 w-4" />{label}</button>)}</div>
+          <div className="hidden lg:block lg:space-y-1"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Tools</p><button onClick={() => changeTab("cms")} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${tab === "cms" ? "bg-blue-600/15 text-blue-300" : "text-slate-500 hover:bg-slate-900 hover:text-white"}`}><Icon name="book" className="h-4 w-4" />Content CMS</button><a href="/admin/rate-limits" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="zap" className="h-4 w-4" />Rate limits</a><a href="/admin/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="settings" className="h-4 w-4" />Settings</a><a href="/dashboard/analytics" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="trending" className="h-4 w-4" />Analytics</a><a href="/test" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="flask" className="h-4 w-4" />Playground</a><a href="/docs" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-900 hover:text-white"><Icon name="book" className="h-4 w-4" />Docs</a></div>
+        </nav>
+      </aside>
+      <div className="min-w-0 flex-1">
+        <main className="mx-auto max-w-[1500px] px-4 pb-28 pt-10 sm:px-6 lg:px-10 lg:pt-14">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="mb-3 flex items-center gap-3"><span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">Control plane v2</span><span className="flex items-center gap-1.5 text-xs text-emerald-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />All systems operational</span></div>
@@ -158,16 +140,7 @@ export default function Admin() {
         <div className="flex items-center gap-2 text-xs text-slate-500"><span className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">Live data</span><button onClick={() => loadAll()} className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-300 hover:border-blue-500/50 hover:text-white">Refresh workspace</button></div>
       </div>
 
-      <div className="grid lg:grid-cols-[220px_1fr] gap-8">
-        <aside className="min-w-0 max-w-full lg:sticky lg:top-28 self-start">
-          <div className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
-            {tabs.map((t) => (
-              <button key={t.id} onClick={() => changeTab(t.id)} className={`px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap text-left ${tab === t.id ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}>{t.label}</button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="min-w-0 max-w-full">
+      <section className="min-w-0 max-w-full">
           {me && <div className="mb-6"><AdminQuickLinks onJump={changeTab} /></div>}
 
           {tab === "overview" && (
@@ -362,11 +335,9 @@ export default function Admin() {
             </div>
           )}
         </section>
+        {tab === "cms" && <AdminCMS headers={headers} loadAll={loadAll} initialPages={cmsPages || []} />}
+        </main>
       </div>
-    
-  {tab === "cms" && <AdminCMS headers={headers} loadAll={loadAll} initialPages={cmsPages || []} />}
-</main>
-</div>
-</div>
+    </div>
   </>);
 }
