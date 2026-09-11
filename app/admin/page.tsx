@@ -14,19 +14,20 @@ import { BrandLoader } from "@/components/loader";
 import { CustomSelect } from "@/components/custom-select";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-type Tab = "overview" | "messages" | "applications" | "pricing" | "rules" | "admins" | "audit" | "cron" | "cms";
+type Tab = "overview" | "messages" | "applications" | "pricing" | "users" | "rules" | "admins" | "audit" | "cron" | "cms";
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "overview";
     const value = new URLSearchParams(window.location.search).get("tab") as Tab | null;
-    return value && ["overview", "messages", "applications", "pricing", "rules", "admins", "audit", "cron", "cms"].includes(value) ? value : "overview";
+    return value && ["overview", "messages", "applications", "pricing", "users", "rules", "admins", "audit", "cron", "cms"].includes(value) ? value : "overview";
   });
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   const [me, setMe] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [apps, setApps] = useState<any[]>([]);
   const [pricing, setPricing] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [audit, setAudit] = useState<any[]>([]);
   const [cronRuns, setCronRuns] = useState<any[]>([]);
@@ -57,11 +58,11 @@ export default function Admin() {
     };
     const m = await get("messages");
     if (m.status === 403) { setState("denied"); return; }
-    const [a, p, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/cron", { headers: h })]);
-    const [messagesData, appsData, pricingData, adminsData, auditData, projectsData, meData, cronData, statsData] = await Promise.all([
-      readArray(m), readArray(a), readArray(p), readArray(ad), readArray(au), readArray(pr), meRes.json().catch(() => null), pn.json().catch(() => null), st.json().catch(() => null),
+    const [a, p, us, ad, st, au, pr, meRes, pn] = await Promise.all([get("applications"), get("pricing"), get("users"), get("admins"), get("stats"), get("audit"), get("projects"), get("me"), fetch("/api/admin/cron", { headers: h })]);
+    const [messagesData, appsData, pricingData, usersData, adminsData, auditData, projectsData, meData, cronData, statsData] = await Promise.all([
+      readArray(m), readArray(a), readArray(p), readArray(us), readArray(ad), readArray(au), readArray(pr), meRes.json().catch(() => null), pn.json().catch(() => null), st.json().catch(() => null),
     ]);
-    setMessages(messagesData); setApps(appsData); setPricing(pricingData); setAdmins(adminsData); setStats(statsData && !Array.isArray(statsData) ? statsData : {}); setAudit(auditData); setProjects(projectsData); setMe(meData && !Array.isArray(meData) ? meData : null); setCronRuns(Array.isArray(cronData) ? cronData : []);
+    setMessages(messagesData); setApps(appsData); setPricing(pricingData); setUsers(usersData); setAdmins(adminsData); setStats(statsData && !Array.isArray(statsData) ? statsData : {}); setAudit(auditData); setProjects(projectsData); setMe(meData && !Array.isArray(meData) ? meData : null); setCronRuns(Array.isArray(cronData) ? cronData : []);
     setState("ready");
   }, [headers]);
 
@@ -92,6 +93,10 @@ export default function Admin() {
     await loadAll();
   };
 
+  const saveUserPlan = async (userId: string, tierName: string) => {
+    await act({ action: "update-user-plan", user_id: userId, tier_name: tierName }, "User plan updated");
+  };
+
   const saveRules = async (p: any) => {
     const list = (id: string) => ((document.getElementById(id) as HTMLInputElement)?.value || "").split(",").map((s) => s.trim()).filter(Boolean);
     const mode = (document.getElementById(`md-${p.id}`) as HTMLSelectElement)?.value || "active";
@@ -118,6 +123,7 @@ export default function Admin() {
     { id: "messages", label: `Messages (${messages.length})` },
     { id: "applications", label: `Applications (${apps.length})` },
     { id: "pricing", label: "Pricing" },
+    { id: "users", label: `Users (${users.length})` },
     { id: "rules", label: "Project rules" },
     { id: "admins", label: "Admins" },
     { id: "audit", label: "Audit log" },
@@ -214,6 +220,33 @@ export default function Admin() {
                   <div className="flex gap-2">
                     <input id={`tg-${p.id}`} defaultValue={p.tag || ""} placeholder="Tagline" className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60" />
                     <button onClick={() => savePrice(p.id, (document.getElementById(`pr-${p.id}`) as HTMLInputElement).value, (document.getElementById(`tg-${p.id}`) as HTMLInputElement).value)} className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm">Save</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === "users" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Users and plans</h2>
+                <p className="mt-1 text-xs text-slate-500">Review registered accounts and assign any available BotShield plan. Changes are recorded in the audit log.</p>
+              </div>
+              {users.length === 0 && <p className="text-slate-500 font-light">No registered users found.</p>}
+              {users.map((u) => (
+                <div key={u.id} className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="break-all text-sm font-medium text-white">{u.email || "No email"}</p>
+                    <p className="mt-1 text-xs text-slate-500">Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"} · {u.confirmed ? "Email confirmed" : "Email unconfirmed"}</p>
+                    {u.last_sign_in_at && <p className="mt-1 text-xs text-slate-600">Last sign-in {new Date(u.last_sign_in_at).toLocaleString()}</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <select defaultValue={u.tier_name} id={`user-plan-${u.id}`} className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500/60 focus:outline-none">
+                      <option value="Hobby">Hobby</option>
+                      <option value="Pro">Pro</option>
+                      <option value="Enterprise">Enterprise</option>
+                    </select>
+                    <button onClick={() => saveUserPlan(u.id, (document.getElementById(`user-plan-${u.id}`) as HTMLSelectElement).value)} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500">Save plan</button>
                   </div>
                 </div>
               ))}

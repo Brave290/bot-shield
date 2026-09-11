@@ -26,6 +26,22 @@ export async function GET(req: Request) {
     return NextResponse.json(applications);
   }
   if (type === "pricing") { const { data } = await supabaseAdmin.from("plan_pricing").select("*"); return NextResponse.json(data || []); }
+  if (type === "users") {
+    const [{ data: authData }, { data: subscriptions }] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      supabaseAdmin.from("subscription_stats").select("user_id,tier_name,updated_at"),
+    ]);
+    const plans = new Map((subscriptions || []).map((subscription) => [subscription.user_id, subscription]));
+    return NextResponse.json((authData?.users || []).map((user) => ({
+      id: user.id,
+      email: user.email || "",
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at,
+      confirmed: Boolean(user.email_confirmed_at),
+      tier_name: plans.get(user.id)?.tier_name || "Hobby",
+      plan_updated_at: plans.get(user.id)?.updated_at || null,
+    })));
+  }
   if (type === "admins") { const { data } = await supabaseAdmin.from("admins").select("*").order("created_at"); return NextResponse.json(data || []); }
   if (type === "audit") { const { data } = await supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50); return NextResponse.json(data || []); }
   if (type === "rate_limits") {
@@ -99,6 +115,21 @@ export async function POST(req: Request) {
     await supabaseAdmin.from("admins").upsert({ email, role: "admin", added_by: admin.email }, { onConflict: "email" });
     await log("add_admin", email);
     return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "update-user-plan") {
+    const userId = String(body.user_id || "");
+    const tierName = String(body.tier_name || "");
+    if (!userId || !["Hobby", "Pro", "Enterprise"].includes(tierName)) return NextResponse.json({ error: "Invalid user or plan" }, { status: 400 });
+    const { data: target, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (userError || !target.user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const { error } = await supabaseAdmin.from("subscription_stats").upsert(
+      { user_id: userId, tier_name: tierName, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await log("update_user_plan", `${target.user.email || userId} -> ${tierName}`);
+    return NextResponse.json({ ok: true, user_id: userId, tier_name: tierName });
   }
 
   if (body.action === "remove-admin") {

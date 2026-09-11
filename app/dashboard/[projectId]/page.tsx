@@ -208,8 +208,18 @@ function ProjectDetailContent() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-slate-400 block mb-2">Secret Key</label>
-                  <code className="block bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-600 font-mono text-sm blur-sm hover:blur-0 transition-all cursor-pointer">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-slate-400">Secret Key</label>
+                    <button
+                      onClick={() => copyToClipboard(project.secret_key)}
+                      className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white"
+                      aria-label="Copy secret key"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <code className="block bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-600 font-mono text-sm blur-sm hover:blur-0 transition-all cursor-pointer" onClick={() => copyToClipboard(project.secret_key)}>
                     {project.secret_key}
                   </code>
                   <p className="text-xs text-slate-500 mt-2">⚠️ Never share this. Click to reveal.</p>
