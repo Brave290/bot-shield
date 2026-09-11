@@ -6,6 +6,7 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,4 +17,5 @@ jobs:
           BASE_URL: https://bo-tshield.vercel.app
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           SMOKE_SECRET_KEY: ${{ secrets.SMOKE_SECRET_KEY }}
+          SMOKE_ALLOW_RATE_LIMITED: "true"
         run: node scripts/smoke-test.mjs

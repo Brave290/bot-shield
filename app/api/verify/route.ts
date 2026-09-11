@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { jwtVerify } from "jose";
 import { z } from "zod";
+import { createHash } from "crypto";
 
 const VerifyPayloadSchema = z.object({
   secretKey: z.string().min(1, "secretKey required"),
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
     // Rate limiting per IP
     const h = await headers();
     const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rateLimitScope = createHash("sha256").update(ip).digest("hex");
     const { data: rateConfig } = await supabaseAdmin
       .from("rate_limits")
       .select("*")
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
         .from("rate_limit_events")
         .select("*", { count: "exact", head: true })
         .eq("limit_id", "verify_ip")
-        .eq("scope_key", ip)
+        .eq("scope_key", rateLimitScope)
         .gte("created_at", cutoff);
 
       if ((count || 0) >= maxAttempts) {
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
 
       await supabaseAdmin.from("rate_limit_events").insert({
         limit_id: "verify_ip",
-        scope_key: ip,
+        scope_key: rateLimitScope,
       });
     }
 

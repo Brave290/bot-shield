@@ -25,6 +25,16 @@ const ChallengePayloadSchema = z.object({
 
 type ChallengePayload = z.infer<typeof ChallengePayloadSchema>;
 
+function decisionReasons(payload: ChallengePayload, score: number, botType: string) {
+  const reasons: string[] = [];
+  if (payload.mouseData.time < 250 || payload.mouseData.curves === 0) reasons.push("automation_pattern");
+  if (payload.typingData.totalChars > 0 && payload.typingData.totalTime / payload.typingData.totalChars < 25) reasons.push("rapid_typing");
+  if (!payload.fingerprint) reasons.push("missing_fingerprint");
+  if (botType !== "human") reasons.push("behavioral_risk");
+  if (score >= 85) reasons.push("high_risk_score");
+  return reasons.length ? reasons : ["normal_behavior"];
+}
+
 export async function POST(req: Request) {
   try {
     const rawPayload = await req.json();
@@ -160,11 +170,12 @@ export async function POST(req: Request) {
     const windowSeconds = rateConfig?.window_seconds || 60;
 
     const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
+    const rateLimitScope = createHash("sha256").update(apiKey).digest("hex");
     const { count, error: countErr } = await supabaseAdmin
       .from("rate_limit_events")
       .select("*", { count: "exact", head: true })
       .eq("limit_id", "api_key")
-      .eq("scope_key", apiKey)
+      .eq("scope_key", rateLimitScope)
       .gte("created_at", cutoff);
 
     if (countErr) {
@@ -188,7 +199,7 @@ export async function POST(req: Request) {
     // Record rate limit event
     await supabaseAdmin.from("rate_limit_events").insert({
       limit_id: "api_key",
-      scope_key: apiKey,
+      scope_key: rateLimitScope,
     });
 
     // Calculate bot score
@@ -201,6 +212,7 @@ export async function POST(req: Request) {
     }
 
     const botType = classifyBot(payload, score);
+    const reasons = decisionReasons(payload, score, botType);
     const wouldBlock = score >= thresholdFor(project.sensitivity);
     const actuallyBlocked = mode === "active" && wouldBlock;
 
@@ -224,7 +236,7 @@ export async function POST(req: Request) {
 
     if (actuallyBlocked) {
       return NextResponse.json(
-        { status: "blocked", score, botType },
+        { status: "blocked", score, botType, reasons },
         { status: 403 }
       );
     }
@@ -235,6 +247,7 @@ export async function POST(req: Request) {
       token,
       score,
       botType,
+      reasons,
       mode,
       shadowWouldBlock: wouldBlock,
     });

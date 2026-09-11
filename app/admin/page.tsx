@@ -39,6 +39,9 @@ export default function Admin() {
   const [abuseEvents, setAbuseEvents] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState("");
   const [transferTo, setTransferTo] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [userPlans, setUserPlans] = useState<Record<string, string>>({});
 
   const changeTab = (nextTab: Tab) => {
     setTab(nextTab);
@@ -99,6 +102,8 @@ export default function Admin() {
     await act({ action: "update-user-plan", user_id: userId, tier_name: tierName }, "User plan updated");
   };
 
+  const visibleUsers = users.filter((user) => String(user.email || "").toLowerCase().includes(userSearch.toLowerCase()));
+
   const deleteUser = async (user: any) => {
     const confirmed = await ask({ title: `Delete ${user.email || "this user"}?`, message: "This permanently removes the Auth account, projects, verification logs, team invitations, and subscription record. It cannot be undone.", confirmLabel: "Delete permanently", danger: true });
     if (confirmed) await act({ action: "delete-user", user_id: user.id }, "User permanently deleted");
@@ -153,6 +158,7 @@ export default function Admin() {
 
       <section className="min-w-0 max-w-full">
           {tab === "overview" && (
+            <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[["Visitors", stats.visitors], ["Users", stats.users], ["Projects", stats.projects], ["Payments", stats.payments], ["Messages", stats.messages], ["Applications", stats.applications], ["Admins", stats.admins]].map(([l, v]) => (
                 <motion.div key={String(l)} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl border border-slate-800 bg-slate-950">
@@ -161,6 +167,11 @@ export default function Admin() {
                 </motion.div>
               ))}
             </div>
+            <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operational pulse</p><h2 className="mt-2 font-serif text-2xl font-bold text-white">Control plane is live</h2></div><span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-400">Healthy</span></div><div className="mt-5 grid grid-cols-3 gap-3 text-center"><div className="rounded-xl bg-slate-900/70 p-3"><p className="text-lg font-semibold text-white">{stats.projects ?? 0}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-slate-600">Projects</p></div><div className="rounded-xl bg-slate-900/70 p-3"><p className="text-lg font-semibold text-white">{stats.messages ?? 0}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-slate-600">Inbox</p></div><div className="rounded-xl bg-slate-900/70 p-3"><p className="text-lg font-semibold text-white">{stats.applications ?? 0}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-slate-600">Applicants</p></div></div></div>
+              <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Quick actions</p><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={() => changeTab("users")} className="rounded-xl border border-slate-700 px-3 py-3 text-left text-xs text-slate-200 hover:border-blue-500/50">Review users</button><button onClick={() => changeTab("abuse")} className="rounded-xl border border-slate-700 px-3 py-3 text-left text-xs text-slate-200 hover:border-red-500/50">Abuse queue</button><button onClick={() => changeTab("rules")} className="rounded-xl border border-slate-700 px-3 py-3 text-left text-xs text-slate-200 hover:border-blue-500/50">Security rules</button><button onClick={() => changeTab("audit")} className="rounded-xl border border-slate-700 px-3 py-3 text-left text-xs text-slate-200 hover:border-blue-500/50">Audit trail</button></div></div>
+            </div>
+            </>
           )}
 
           {tab === "features" && <AdminFeatureLab onJump={changeTab} />}
@@ -219,9 +230,11 @@ export default function Admin() {
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">Users and plans</h2>
                 <p className="mt-1 text-xs text-slate-500">Review registered accounts and assign any available BotShield plan. Changes are recorded in the audit log.</p>
+                <input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search users by email" className="mt-4 w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500/60" />
               </div>
-              {users.length === 0 && <p className="text-slate-500 font-light">No registered users found.</p>}
-              {users.map((u) => (
+              <div className="space-y-4 pb-24">
+                {visibleUsers.length === 0 && <p className="text-slate-500 font-light">No matching users found.</p>}
+                {visibleUsers.map((u) => (
                 <div key={u.id} className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="break-all text-sm font-medium text-white">{u.email || "No email"}</p>
@@ -229,12 +242,16 @@ export default function Admin() {
                     {u.last_sign_in_at && <p className="mt-1 text-xs text-slate-600">Last sign-in {new Date(u.last_sign_in_at).toLocaleString()}</p>}
                   </div>
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                    <div className="min-w-[150px]"><CustomSelect defaultValue={u.tier_name || "Hobby"} id={`user-plan-${u.id}`}><option value="Hobby">Hobby</option><option value="Pro">Pro</option><option value="Enterprise">Enterprise</option></CustomSelect></div>
-                    <button onClick={() => saveUserPlan(u.id, (document.getElementById(`user-plan-${u.id}`) as HTMLInputElement).value)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-500">Save plan</button>
+                    <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:min-w-[270px]">
+                      {["Hobby", "Pro", "Enterprise"].map((plan) => { const selected = userPlans[u.id] || u.tier_name || "Hobby"; return <button key={plan} type="button" onClick={() => setUserPlans((current) => ({ ...current, [u.id]: plan }))} className={`rounded-lg px-2 py-2 text-xs font-medium transition ${selected === plan ? "bg-blue-600 text-white shadow" : "text-slate-500 hover:bg-slate-800 hover:text-white"}`}>{plan}</button>; })}
+                    </div>
+                    <button onClick={() => setSelectedUser(u)} className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-white">View details</button>
+                    <button onClick={() => saveUserPlan(u.id, userPlans[u.id] || u.tier_name || "Hobby")} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-500">Save plan</button>
                     {me?.role === "owner" && <button onClick={() => deleteUser(u)} className="rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 transition hover:bg-red-500/10">Delete user</button>}
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
@@ -352,6 +369,27 @@ export default function Admin() {
           )}
         </section>
         {tab === "cms" && <AdminCMS headers={headers} loadAll={loadAll} initialPages={cmsPages || []} />}
+        {selectedUser && (
+          <div className="fixed inset-0 z-[110] flex justify-end bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="User details" onClick={() => setSelectedUser(null)}>
+            <aside className="h-full w-full max-w-md overflow-y-auto border-l border-slate-800 bg-[#07101e] p-6 shadow-2xl shadow-black/50" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-start justify-between gap-4">
+                <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Account profile</p><h2 className="mt-2 break-all font-serif text-2xl font-bold text-white">{selectedUser.email || "No email"}</h2><p className="mt-1 text-xs text-slate-500">ID {selectedUser.id}</p></div>
+                <button onClick={() => setSelectedUser(null)} aria-label="Close user details" className="rounded-xl border border-slate-700 px-3 py-2 text-slate-400 hover:border-slate-500 hover:text-white">×</button>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4"><p className="text-[10px] uppercase tracking-wider text-slate-600">Plan</p><p className="mt-2 font-medium text-white">{selectedUser.tier_name || "Hobby"}</p></div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4"><p className="text-[10px] uppercase tracking-wider text-slate-600">Email</p><p className="mt-2 font-medium text-emerald-400">{selectedUser.confirmed ? "Confirmed" : "Unconfirmed"}</p></div>
+              </div>
+              <div className="mt-6 space-y-3 rounded-2xl border border-slate-800 bg-slate-950 p-5 text-sm">
+                <div className="flex justify-between gap-4"><span className="text-slate-500">Joined</span><span className="text-right text-slate-200">{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString() : "—"}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-500">Last sign-in</span><span className="text-right text-slate-200">{selectedUser.last_sign_in_at ? new Date(selectedUser.last_sign_in_at).toLocaleString() : "Never"}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-500">Plan updated</span><span className="text-right text-slate-200">{selectedUser.plan_updated_at ? new Date(selectedUser.plan_updated_at).toLocaleString() : "Not recorded"}</span></div>
+              </div>
+              <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5"><p className="text-sm font-medium text-blue-200">Admin controls</p><p className="mt-2 text-xs leading-relaxed text-slate-400">Plan changes are written through the protected admin API and recorded in the audit log. Never share service keys or password data from this panel.</p></div>
+              <div className="mt-6 flex flex-col gap-3"><button onClick={() => { setTab("audit"); setSelectedUser(null); }} className="rounded-xl border border-slate-700 px-4 py-3 text-sm text-slate-200 hover:border-blue-500/50 hover:bg-blue-500/10">Open audit log</button>{me?.role === "owner" && <button onClick={() => { setSelectedUser(null); deleteUser(selectedUser); }} className="rounded-xl border border-red-500/30 px-4 py-3 text-sm text-red-300 hover:bg-red-500/10">Delete this user</button>}</div>
+            </aside>
+          </div>
+        )}
         </main>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { createHash } from "crypto";
 
 export async function POST(req: Request) {
   const token = (req.headers.get("authorization") || "").replace("Bearer ", "");
@@ -10,7 +11,10 @@ export async function POST(req: Request) {
   const { data: projects } = await supabaseAdmin.from("projects").select("id, api_key").eq("user_id", uid);
   for (const p of projects || []) {
     await supabaseAdmin.from("verification_logs").delete().eq("project_id", p.id);
-    await supabaseAdmin.from("rate_limit_events").delete().eq("scope_key", p.api_key);
+    const scopeKey = createHash("sha256").update(p.api_key).digest("hex");
+    await supabaseAdmin.from("rate_limit_events").delete().in("scope_key", [p.api_key, scopeKey]);
+    await supabaseAdmin.from("project_members").delete().eq("project_id", p.id);
+    await supabaseAdmin.from("team_invitations").delete().eq("project_id", p.id);
   }
   if (projects?.length) await supabaseAdmin.from("projects").delete().eq("user_id", uid);
   await supabaseAdmin.from("subscription_stats").delete().eq("user_id", uid);
