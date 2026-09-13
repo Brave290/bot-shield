@@ -1,5 +1,52 @@
 # Changelog
 
+## [4.1.0] - 2026-09-13
+
+### New Features (20)
+- **Webhook delivery & replay** — Send signed events for blocked traffic with delivery history and replay
+- **Alert policies** — Notify when bot rates, error rates, traffic volume, or quota cross thresholds
+- **Advanced analytics filters** — Filter by project, country, ASN, device, browser, score range
+- **Decision explanations** — Show signals and score components behind each allow/block decision
+- **IP/ASN/country controls** — Reusable allowlists, denylists, geofences, and threat feeds
+- **Bot fingerprint history** — Track recurring automation fingerprints across projects
+- **Shadow mode & gradual rollout** — Observe-only deployments, percentage rollouts, auto-rollback
+- **Custom branded verification** — Enterprise logo, colors, copy, and support links
+- **Framework SDKs** — Published packages for Next.js, React, Vue, Laravel, Django, Go
+- **Synthetic traffic testing** — Generate controlled human-like and automated test traffic
+- **Incident investigation workspace** — Bundle related requests, notes, evidence into incident records
+- **Audit exports** — Export immutable audit logs in CSV and JSON formats
+- **SLA & status visibility** — Uptime history, incident notices, maintenance windows
+- **Model feedback loop** — Label false positives/negatives to improve project-specific detection rules
+- **Privacy & retention controls** — Telemetry minimization, regional processing, retention windows
+- **Quota ledger** — Append-only usage ledger with atomic monthly allocation
+- **Policy simulator v2** — Preview score thresholds, IP/origin rules before activation
+- **Multi-language SDKs** — Python, Go, Ruby clients with typed errors and retries
+- **Team permissions v2** — Owner/admin/developer/analyst/viewer enforced in API and RLS
+- **Observability integrations** — OpenTelemetry traces, Prometheus metrics, Sentry-compatible errors
+
+### New Products (10)
+- **BotShield Scanner** — Automated vulnerability scanner for bot protection
+- **BotShield WAF** — Managed web application firewall with bot rules
+- **BotShield Proxy** — Reverse proxy with built-in bot detection
+- **BotShield API Shield** — API gateway with rate limiting and bot scoring
+- **BotShield Identity** — Passwordless auth with bot-checked login sessions
+- **BotShield Analytics Pro** — Standalone traffic intelligence dashboard
+- **BotShield Compliance** — SOC2/GDPR audit trail and compliance reports
+- **BotShield Test Lab** — Synthetic bot traffic generator for QA teams
+- **BotShield Edge** — Edge-deployed detection on Cloudflare Workers/Deno
+- **BotShield Marketplace** — Community rules, fingerprints, and threat feeds
+
+### Database
+- New migration `20260913100000_v4_new_features_and_products.sql` with 40+ new tables
+- All new tables have RLS enabled with service-role-only policies
+- Performance indexes for fingerprint history, quota ledger, identity sessions
+
+### UI
+- Dashboard sidebar updated with links to all new features and products
+- Admin feature lab expanded from 20 to 50 modules
+- New dashboard pages: webhooks, alerts, incidents, threats, fingerprints, feedback, exports, products hub
+- New product pages: scanner, WAF, proxy, API shield, identity, analytics pro, compliance, test lab, edge, marketplace
+
 ## [4.0.0] - 2026-09-13
 
 ### Security Fixes

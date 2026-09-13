@@ -38,7 +38,7 @@ Legitimate users experience zero friction. Automated traffic is identified and b
 - Per-project API keys with rotation and revocation
 - Real-time analytics streamed from production telemetry
 - Configurable rate limiting scoped by IP, email, and API key
-- Role-based administration (owner / admin) with ownership transfer
+- Role-based administration (owner / admin / developer / analyst / viewer) with ownership transfer
 - Multi-tier subscription model (Hobby, Pro, Enterprise)
 - Fail-open verification path for maximum availability
 - Privacy-preserving by design: SHA-256 hashed identifiers, no tracking cookies
@@ -46,6 +46,29 @@ Legitimate users experience zero friction. Automated traffic is identified and b
 - Security center with staged policy rollout and webhook subscriptions
 - Team collaboration with project-level invitations and roles
 - Secret key rotation with grace window and revocation
+- Webhook delivery with signed events and replay
+- Alert policies with configurable thresholds and channels
+- Incident investigation workspace
+- IP/country/ASN threat lists
+- Bot fingerprint tracking across projects
+- Model feedback loop for improving detection
+- Data export in CSV and JSON formats
+- SLA status page with uptime history
+- Quota ledger with atomic monthly allocation
+- Privacy and retention controls
+
+### Products
+
+- **BotShield Scanner** — Automated vulnerability scanner for bot protection
+- **BotShield WAF** — Managed web application firewall with bot rules
+- **BotShield Proxy** — Reverse proxy with built-in bot detection
+- **BotShield API Shield** — API gateway with rate limiting and bot scoring
+- **BotShield Identity** — Passwordless auth with bot-checked login sessions
+- **BotShield Analytics Pro** — Standalone traffic intelligence dashboard
+- **BotShield Compliance** — SOC2/GDPR audit trail and compliance reports
+- **BotShield Test Lab** — Synthetic bot traffic generator for QA teams
+- **BotShield Edge** — Edge-deployed detection on Cloudflare Workers/Deno
+- **BotShield Marketplace** — Community rules, fingerprints, and threat feeds
 
 ## Integration
 
