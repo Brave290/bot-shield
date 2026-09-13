@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { createHash } from "crypto";
 
 const MAX_CV_BYTES = 5 * 1024 * 1024;
 const roles = new Set(["Senior Backend Engineer", "Security Researcher", "Developer Advocate"]);
@@ -23,6 +25,11 @@ async function hasValidSignature(file: File, ext: string) {
 
 export async function POST(request: Request) {
   try {
+    const ip = await getClientIP();
+    const scopeKey = createHash("sha256").update(ip).digest("hex");
+    const limit = await checkRateLimit("careers_ip", scopeKey);
+    if (!limit.allowed) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429, headers: { "Retry-After": String(limit.resetInSeconds) } });
+
     const form = await request.formData();
     const role = String(form.get("role") || "");
     const name = String(form.get("name") || "").trim();

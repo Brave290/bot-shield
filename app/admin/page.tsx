@@ -149,7 +149,7 @@ export default function Admin() {
         <main className="mx-auto max-w-[1500px] px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-24 lg:pt-14">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
         <div>
-          <div className="mb-3 flex items-center gap-3"><span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">Control plane v2</span><span className="flex items-center gap-1.5 text-xs text-emerald-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />All systems operational</span></div>
+          <div className="mb-3 flex items-center gap-3"><span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">Control plane v4</span><span className="flex items-center gap-1.5 text-xs text-emerald-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />All systems operational</span></div>
           <h1 className="font-serif text-4xl font-bold tracking-tight text-white sm:text-5xl">Admin Console</h1>
           <p className="mt-2 text-sm text-slate-500">{me?.email} · <span className={me?.role === "owner" ? "text-amber-400" : "text-blue-400"}>{me?.role}</span> · secure workspace</p>
         </div>

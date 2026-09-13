@@ -42,6 +42,10 @@ Legitimate users experience zero friction. Automated traffic is identified and b
 - Multi-tier subscription model (Hobby, Pro, Enterprise)
 - Fail-open verification path for maximum availability
 - Privacy-preserving by design: SHA-256 hashed identifiers, no tracking cookies
+- Rules simulator for previewing scoring decisions
+- Security center with staged policy rollout and webhook subscriptions
+- Team collaboration with project-level invitations and roles
+- Secret key rotation with grace window and revocation
 
 ## Integration
 
@@ -85,17 +89,36 @@ Environment variables are documented in [`.env.example`](.env.example).
 
 - Row-Level Security enforced on all database tables
 - Service-role credentials never exposed to the client
-- Rate limiting on authentication and verification endpoints
+- Rate limiting on authentication, verification, contact, and career endpoints
 - Admin operations verified server-side against an administrators table
+- Webhook signature verification with timing-safe comparison
+- Audit logging for all sensitive operations
 
 Vulnerability reports: `info.bravehx@gmail.com` (subject `SECURITY`). Acknowledgment within 48 hours.
 
-## Roadmap
+## Changelog
 
-- Stripe billing integration for paid tiers
-- Machine-learning scoring models layered on the rule engine
-- Per-project analytics breakdowns
-- Shadow (observe-only) deployment mode
+### v4.0.0 — 2026-09-13
+
+#### Security Fixes
+- **CRITICAL**: Hardened RLS policies — removed public insert on subscription_stats, rate_limit_events, request_metrics
+- **CRITICAL**: Added service-role-only policies for admins, billing_events, project_members, team_invitations, platform_settings, job_applications
+- **HIGH**: Added rate limiting to contact form and career application endpoints
+- **HIGH**: Added input length validation on contact endpoint
+- **HIGH**: Added billing webhook tier validation and audit logging
+- **HIGH**: Made account deletion transactional with error tracking and audit trail
+- **MEDIUM**: Added performance indexes for foreign keys and common query patterns
+
+#### Features
+- **Rules Simulator** — Complete rebuild with scoring explanation and signal breakdown
+- **Admin Console v4** — Upgraded control plane version badge
+- **Dashboard v4** — Enhanced project cards, setup health checklist, usage stats
+
+#### Improvements
+- Added `Retry-After` headers on rate-limited contact and career endpoints
+- Added audit log entries for subscription state changes
+- Added input validation for contact form fields
+- Updated all documentation files
 
 ## Company
 

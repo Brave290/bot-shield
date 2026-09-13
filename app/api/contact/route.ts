@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { createHash } from "crypto";
 
 export async function POST(req: Request) {
   try {
+    const ip = await getClientIP();
+    const scopeKey = createHash("sha256").update(ip).digest("hex");
+    const limit = await checkRateLimit("contact_ip", scopeKey);
+    if (!limit.allowed) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429, headers: { "Retry-After": String(limit.resetInSeconds) } });
+
     const { name, email, message } = await req.json();
     if (!name || !email || !message) return NextResponse.json({ error: "All fields required" }, { status: 400 });
+    if (String(name).length > 200 || String(email).length > 254 || String(message).length > 5000) return NextResponse.json({ error: "Input too long" }, { status: 400 });
 
     const { error } = await supabaseAdmin.from("contact_messages").insert({ name, email, message });
     if (error) return NextResponse.json({ error: "Failed to save message" }, { status: 500 });
