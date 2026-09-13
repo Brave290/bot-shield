@@ -1,177 +1,316 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
+import { Modal, ConfirmModal } from "@/components/ui/modal";
+import { Select, Badge, EmptyState, StatCard } from "@/components/ui/form";
+import { PlanGate } from "@/components/plan-gate";
+import { toast } from "@/components/toast";
 import { motion } from "framer-motion";
-import { Globe, ArrowRightLeft, Activity, Plus, Server, Clock, CheckCircle, XCircle } from "lucide-react";
+import {
+  Globe, Plus, Trash2, Edit, Loader2, AlertTriangle,
+  CheckCircle, XCircle, Server, Activity,
+} from "lucide-react";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type ProxyConfig = {
   id: string;
   name: string;
-  upstream: string;
-  port: number;
-  protocol: "http" | "https" | "tcp";
-  status: "active" | "inactive" | "error";
-  requests: number;
-  latency: number;
+  upstream_url: string;
+  method: string;
+  rate_limit: number;
+  timeout_ms: number;
+  enabled: boolean;
+  created_at: string;
 };
 
 type ProxyLog = {
   id: string;
-  config: string;
+  config_name: string;
   method: string;
   path: string;
-  status: number;
-  latency: number;
-  timestamp: string;
+  status_code: number;
+  latency_ms: number;
+  created_at: string;
 };
 
-const mockConfigs: ProxyConfig[] = [
-  { id: "1", name: "API Gateway", upstream: "api.internal.example.com", port: 443, protocol: "https", status: "active", requests: 45230, latency: 12 },
-  { id: "2", name: "Static Assets", upstream: "cdn.example.com", port: 443, protocol: "https", status: "active", requests: 128900, latency: 5 },
-  { id: "3", name: "Legacy API", upstream: "legacy.internal.example.com", port: 8080, protocol: "http", status: "inactive", requests: 1230, latency: 45 },
-];
-
-const mockLogs: ProxyLog[] = [
-  { id: "l1", config: "API Gateway", method: "GET", path: "/api/v1/users", status: 200, latency: 15, timestamp: "2026-09-12T14:32:00Z" },
-  { id: "l2", config: "API Gateway", method: "POST", path: "/api/v1/auth", status: 201, latency: 22, timestamp: "2026-09-12T14:31:00Z" },
-  { id: "l3", config: "Static Assets", method: "GET", path: "/assets/main.js", status: 200, latency: 3, timestamp: "2026-09-12T14:30:00Z" },
-  { id: "l4", config: "API Gateway", method: "GET", path: "/api/v1/search", status: 500, latency: 120, timestamp: "2026-09-12T14:29:00Z" },
-  { id: "l5", config: "Legacy API", method: "GET", path: "/old/endpoint", status: 503, latency: 500, timestamp: "2026-09-12T14:28:00Z" },
-];
-
-const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } };
+const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
 
 export default function ProxyPage() {
-  const [configs] = useState<ProxyConfig[]>(mockConfigs);
-  const [logs] = useState<ProxyLog[]>(mockLogs);
-  const [showForm, setShowForm] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newUpstream, setNewUpstream] = useState("");
-  const [newPort, setNewPort] = useState("443");
-  const [newProtocol, setNewProtocol] = useState<"http" | "https" | "tcp">("https");
+  const [configs, setConfigs] = useState<ProxyConfig[]>([]);
+  const [logs, setLogs] = useState<ProxyLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [editConfig, setEditConfig] = useState<ProxyConfig | null>(null);
+  const [deleteConfig, setDeleteConfig] = useState<ProxyConfig | null>(null);
+
+  const [formName, setFormName] = useState("");
+  const [formUpstream, setFormUpstream] = useState("");
+  const [formMethod, setFormMethod] = useState("*");
+  const [formRateLimit, setFormRateLimit] = useState("0");
+  const [formTimeout, setFormTimeout] = useState("30000");
+
+  const getToken = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || "";
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = await getToken();
+      const [configsRes, logsRes] = await Promise.all([
+        fetch("/api/products/proxy", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/products/proxy/logs", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (!configsRes.ok) throw new Error("Failed to load configs");
+      const configsData = await configsRes.json();
+      setConfigs(Array.isArray(configsData) ? configsData : []);
+      if (logsRes.ok) {
+        const logsData = await logsRes.json();
+        setLogs(Array.isArray(logsData) ? logsData : []);
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = () => { setFormName(""); setFormUpstream(""); setFormMethod("*"); setFormRateLimit("0"); setFormTimeout("30000"); };
+
+  const handleCreate = async () => {
+    if (!formName.trim() || !formUpstream.trim()) { toast("error", "Name and upstream URL are required"); return; }
+    const token = await getToken();
+    const res = await fetch("/api/products/proxy", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create-config", name: formName, upstream_url: formUpstream, method: formMethod, rate_limit: Number(formRateLimit), timeout_ms: Number(formTimeout) }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast("error", data.error || "Failed to create config"); return; }
+    toast("success", "Config created");
+    setShowCreate(false);
+    resetForm();
+    load();
+  };
+
+  const handleEdit = async () => {
+    if (!editConfig) return;
+    const token = await getToken();
+    const res = await fetch("/api/products/proxy", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update-config", config_id: editConfig.id, name: formName, upstream_url: formUpstream, method: formMethod, rate_limit: Number(formRateLimit), timeout_ms: Number(formTimeout) }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast("error", data.error || "Failed to update"); return; }
+    toast("success", "Config updated");
+    setEditConfig(null);
+    resetForm();
+    load();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfig) return;
+    const token = await getToken();
+    const res = await fetch("/api/products/proxy", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete-config", config_id: deleteConfig.id }),
+    });
+    if (!res.ok) { toast("error", "Failed to delete config"); return; }
+    toast("success", "Config deleted");
+    setDeleteConfig(null);
+    load();
+  };
+
+  const openEdit = (c: ProxyConfig) => {
+    setFormName(c.name);
+    setFormUpstream(c.upstream_url);
+    setFormMethod(c.method);
+    setFormRateLimit(String(c.rate_limit));
+    setFormTimeout(String(c.timeout_ms));
+    setEditConfig(c);
+  };
 
   return (
     <DashboardShell userType="user">
-      <div className="space-y-6 sm:space-y-8">
-        <motion.div initial="hidden" animate="visible" variants={fadeIn}>
-          <div className="mb-3 flex items-center gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Reverse Proxy</p>
-            <span className="rounded-full border border-slate-800 bg-slate-900/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">BotShield Proxy</span>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Proxy Configurations</h1>
-          <p className="mt-1 text-slate-400">Route and protect your traffic through BotShield's reverse proxy layer.</p>
-        </motion.div>
-
-        {/* Stats */}
-        <motion.div className="grid grid-cols-2 gap-4 lg:grid-cols-4" initial="hidden" animate="visible" variants={fadeIn}>
-          {[["Configurations", configs.length, "blue"], ["Active", configs.filter((c) => c.status === "active").length, "emerald"], ["Total Requests", configs.reduce((sum, c) => sum + c.requests, 0).toLocaleString(), "violet"], ["Avg Latency", `${Math.round(configs.reduce((sum, c) => sum + c.latency, 0) / configs.length)}ms`, "amber"]].map(([label, value, color]) => (
-            <div key={String(label)} className="group rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-950 p-5 transition hover:border-blue-500/40">
-              <div className={`mb-4 h-1 w-10 rounded-full bg-${color}-500`} />
-              <p className="text-xs uppercase tracking-wider text-slate-500">{String(label)}</p>
-              <p className="mt-2 truncate text-2xl font-bold text-white">{String(value)}</p>
+      <PlanGate feature="proxy" currentPlan="Enterprise">
+        <div className="space-y-6 sm:space-y-8">
+          <motion.div initial="hidden" animate="visible" variants={fadeIn}>
+            <div className="mb-3 flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Reverse Proxy</p>
+              <Badge variant="info">BotShield Proxy</Badge>
             </div>
-          ))}
-        </motion.div>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Proxy Configurations</h1>
+            <p className="mt-1 text-slate-400">Route and protect your traffic through BotShield&apos;s reverse proxy layer.</p>
+          </motion.div>
 
-        {/* Proxy Configs */}
-        <motion.section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6" initial="hidden" animate="visible" variants={fadeIn}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Configurations</h2>
-              <p className="mt-1 text-sm text-slate-400">Manage your proxy endpoints and upstream servers.</p>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
             </div>
-            <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500">
-              <Plus className="h-4 w-4" /> Add Config
-            </button>
-          </div>
-          <div className="mt-4 space-y-3">
-            {configs.map((config) => (
-              <div key={config.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-slate-950 p-4 transition hover:bg-slate-900">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                    <Globe className="h-5 w-5 text-blue-400" />
-                  </div>
+          ) : error ? (
+            <motion.div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center" variants={fadeIn} initial="hidden" animate="visible">
+              <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-red-400" />
+              <p className="text-sm text-red-400">{error}</p>
+              <button onClick={load} className="mt-3 text-sm text-blue-400 hover:underline">Retry</button>
+            </motion.div>
+          ) : (
+            <>
+              <motion.div className="grid grid-cols-2 gap-4 lg:grid-cols-4" variants={fadeIn} initial="hidden" animate="visible">
+                <StatCard label="Configurations" value={configs.length} color="bg-blue-500" />
+                <StatCard label="Active" value={configs.filter((c) => c.enabled).length} color="bg-emerald-500" />
+                <StatCard label="Logs" value={logs.length} color="bg-violet-500" />
+                <StatCard label="Avg Timeout" value={`${configs.length ? Math.round(configs.reduce((s, c) => s + c.timeout_ms, 0) / configs.length) : 0}ms`} color="bg-amber-500" />
+              </motion.div>
+
+              <motion.section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6" variants={fadeIn} initial="hidden" animate="visible">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-white">{config.name}</p>
-                    <p className="font-mono text-xs text-slate-500">{config.protocol}://{config.upstream}:{config.port}</p>
+                    <h2 className="text-xl font-semibold text-white">Configurations</h2>
+                    <p className="mt-1 text-sm text-slate-400">Manage your proxy endpoints and upstream servers.</p>
                   </div>
+                  <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500">
+                    <Plus className="h-4 w-4" /> Add Config
+                  </button>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500">{config.requests.toLocaleString()} reqs</p>
-                    <p className="text-xs text-slate-500">{config.latency}ms avg</p>
+                {configs.length === 0 ? (
+                  <EmptyState icon={<Globe className="h-8 w-8 text-slate-500" />} title="No proxy configs" description="Create a proxy configuration to route traffic." action={
+                    <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500">
+                      <Plus className="h-4 w-4" /> Add Config
+                    </button>
+                  } />
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {configs.map((config) => (
+                      <div key={config.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-slate-950 p-4 transition hover:bg-slate-900">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                            <Globe className="h-5 w-5 text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">{config.name}</p>
+                            <p className="font-mono text-xs text-slate-500">{config.upstream_url}</p>
+                            <p className="text-xs text-slate-600">Method: {config.method} &middot; Timeout: {config.timeout_ms}ms</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={config.enabled ? "success" : "default"}>{config.enabled ? "Enabled" : "Disabled"}</Badge>
+                          <button onClick={() => openEdit(config)} className="p-2 text-slate-400 hover:text-white transition"><Edit className="h-4 w-4" /></button>
+                          <button onClick={() => setDeleteConfig(config)} className="p-2 text-slate-400 hover:text-red-400 transition"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${config.status === "active" ? "bg-green-500/10 text-green-400" : config.status === "error" ? "bg-red-500/10 text-red-400" : "bg-slate-700 text-slate-400"}`}>{config.status}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                )}
+              </motion.section>
 
-          {showForm && (
-            <div className="mt-6 rounded-xl border border-blue-500/20 bg-blue-500/5 p-5">
-              <h3 className="text-sm font-semibold text-white">New Proxy Configuration</h3>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs text-slate-400">Name</label>
-                  <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="My Proxy" className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Upstream Host</label>
-                  <input value={newUpstream} onChange={(e) => setNewUpstream(e.target.value)} placeholder="upstream.example.com" className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Port</label>
-                  <input value={newPort} onChange={(e) => setNewPort(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Protocol</label>
-                  <select value={newProtocol} onChange={(e) => setNewProtocol(e.target.value as "http" | "https" | "tcp")} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white">
-                    <option value="https">HTTPS</option>
-                    <option value="http">HTTP</option>
-                    <option value="tcp">TCP</option>
-                  </select>
-                </div>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <button className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500">Create</button>
-                <button onClick={() => setShowForm(false)} className="rounded-xl border border-slate-700 px-5 py-2.5 text-sm text-slate-300 transition hover:border-slate-600">Cancel</button>
-              </div>
-            </div>
+              <motion.section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6" variants={fadeIn} initial="hidden" animate="visible">
+                <h2 className="text-xl font-semibold text-white">Recent Logs</h2>
+                {logs.length === 0 ? (
+                  <EmptyState icon={<Activity className="h-8 w-8 text-slate-500" />} title="No logs yet" description="Proxy logs will appear here once traffic flows." />
+                ) : (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-500">
+                          <th className="pb-3 font-medium">Config</th>
+                          <th className="pb-3 font-medium">Method</th>
+                          <th className="pb-3 font-medium">Path</th>
+                          <th className="pb-3 font-medium">Status</th>
+                          <th className="pb-3 font-medium">Latency</th>
+                          <th className="pb-3 font-medium">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {logs.slice(0, 20).map((log) => (
+                          <tr key={log.id} className="hover:bg-slate-900/50">
+                            <td className="py-3 text-white">{log.config_name}</td>
+                            <td className="py-3"><span className={`rounded px-1.5 py-0.5 text-xs font-mono ${log.method === "GET" ? "bg-blue-500/10 text-blue-400" : log.method === "POST" ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-300"}`}>{log.method}</span></td>
+                            <td className="py-3 font-mono text-xs text-slate-400 max-w-[200px] truncate">{log.path}</td>
+                            <td className="py-3">{log.status_code >= 200 && log.status_code < 300 ? <CheckCircle className="h-4 w-4 text-green-400" /> : log.status_code >= 500 ? <XCircle className="h-4 w-4 text-red-400" /> : <span className="text-sm text-amber-400">{log.status_code}</span>}</td>
+                            <td className="py-3 text-slate-400">{log.latency_ms}ms</td>
+                            <td className="py-3 text-slate-500 text-xs">{new Date(log.created_at).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </motion.section>
+            </>
           )}
-        </motion.section>
+        </div>
+      </PlanGate>
 
-        {/* Recent Logs */}
-        <motion.section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6" initial="hidden" animate="visible" variants={fadeIn}>
-          <h2 className="text-xl font-semibold text-white">Recent Logs</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-500">
-                  <th className="pb-3 font-medium">Config</th>
-                  <th className="pb-3 font-medium">Method</th>
-                  <th className="pb-3 font-medium">Path</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Latency</th>
-                  <th className="pb-3 font-medium">Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-900/50">
-                    <td className="py-3 text-white">{log.config}</td>
-                    <td className="py-3"><span className={`rounded px-1.5 py-0.5 text-xs font-mono ${log.method === "GET" ? "bg-blue-500/10 text-blue-400" : log.method === "POST" ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-300"}`}>{log.method}</span></td>
-                    <td className="py-3 font-mono text-xs text-slate-400 max-w-[200px] truncate">{log.path}</td>
-                    <td className="py-3">{log.status >= 200 && log.status < 300 ? <CheckCircle className="h-4 w-4 text-green-400" /> : log.status >= 500 ? <XCircle className="h-4 w-4 text-red-400" /> : <span className="text-sm text-amber-400">{log.status}</span>}</td>
-                    <td className="py-3 text-slate-400">{log.latency}ms</td>
-                    <td className="py-3 text-slate-500 text-xs">{new Date(log.timestamp).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Proxy Config" description="Configure a new reverse proxy endpoint.">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">Name</label>
+            <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="My API Proxy" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none" />
           </div>
-        </motion.section>
-      </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">Upstream URL</label>
+            <input value={formUpstream} onChange={(e) => setFormUpstream(e.target.value)} placeholder="https://api.example.com" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none" />
+          </div>
+          <Select value={formMethod} onChange={setFormMethod} label="Method" options={[{ value: "*", label: "All Methods" }, { value: "GET", label: "GET" }, { value: "POST", label: "POST" }, { value: "PUT", label: "PUT" }, { value: "DELETE", label: "DELETE" }]} />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Rate Limit (0 = unlimited)</label>
+              <input type="number" value={formRateLimit} onChange={(e) => setFormRateLimit(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Timeout (ms)</label>
+              <input type="number" value={formTimeout} onChange={(e) => setFormTimeout(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">Cancel</button>
+            <button onClick={handleCreate} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors">Create Config</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!editConfig} onClose={() => { setEditConfig(null); resetForm(); }} title="Edit Proxy Config" description="Update proxy configuration.">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">Name</label>
+            <input value={formName} onChange={(e) => setFormName(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">Upstream URL</label>
+            <input value={formUpstream} onChange={(e) => setFormUpstream(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+          <Select value={formMethod} onChange={setFormMethod} label="Method" options={[{ value: "*", label: "All Methods" }, { value: "GET", label: "GET" }, { value: "POST", label: "POST" }, { value: "PUT", label: "PUT" }, { value: "DELETE", label: "DELETE" }]} />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Rate Limit</label>
+              <input type="number" value={formRateLimit} onChange={(e) => setFormRateLimit(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Timeout (ms)</label>
+              <input type="number" value={formTimeout} onChange={(e) => setFormTimeout(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={() => { setEditConfig(null); resetForm(); }} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">Cancel</button>
+            <button onClick={handleEdit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors">Save Changes</button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmModal open={!!deleteConfig} onClose={() => setDeleteConfig(null)} onConfirm={handleDelete} title="Delete Config" message={`Are you sure you want to delete "${deleteConfig?.name}"?`} confirmLabel="Delete" danger />
     </DashboardShell>
   );
 }
